@@ -28,13 +28,14 @@ export default defineConfig(({ mode }) => {
           manualChunks: (id) => {
             // Vendor chunks
             if (id.includes('node_modules')) {
-              if (id.includes('react/') || id.includes('react-dom')) return 'vendor-react';
+              // Ensure React and ReactDOM are in the same chunk
+              if (id.includes('react-dom') || id.includes('react/')) return 'vendor-react';
+              if (id.includes('react')) return 'vendor-react';
               if (id.includes('redux') || id.includes('@reduxjs')) return 'vendor-redux';
               if (id.includes('react-router')) return 'vendor-router';
               if (id.includes('pdfjs-dist') || id.includes('react-pdf')) return 'vendor-pdf';
               if (id.includes('recharts')) return 'vendor-charts';
               if (id.includes('framer-motion')) return 'vendor-motion';
-              if (id.includes('@react-three')) return 'vendor-three';
               if (id.includes('axios')) return 'vendor-http';
               return 'vendor-other';
             }
