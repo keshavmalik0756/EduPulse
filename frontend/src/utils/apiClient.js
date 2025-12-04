@@ -1,8 +1,6 @@
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "react-hot-toast";
-import { store } from "../redux/store"; // Import the Redux store
-import { getUserSuccess } from "../redux/authSlice"; // Import the action
 
 // ====================== CONFIG ======================
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
@@ -126,8 +124,10 @@ apiClient.interceptors.response.use(
             // Update user data in localStorage if provided
             if (refreshedUser) {
               localStorage.setItem("user", JSON.stringify(refreshedUser));
-              // Also update Redux store with refreshed user data
-              store.dispatch(getUserSuccess({ user: refreshedUser }));
+              // Notify subscribers about user update
+              if (onUserUpdate) {
+                onUserUpdate(refreshedUser);
+              }
             }
             
             return apiClient(originalRequest);
@@ -195,6 +195,12 @@ apiClient.interceptors.response.use(
 );
 
 // ====================== TOKEN UTILITIES ======================
+let onUserUpdate = null;
+
+export const setOnUserUpdate = (callback) => {
+  onUserUpdate = callback;
+};
+
 export const authUtils = {
   getToken,
   setToken,

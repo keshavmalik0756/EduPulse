@@ -14,16 +14,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import Navbar from '../components/LandingPage/Navbar';
-import HeroSection from '../components/LandingPage/HeroSection';
-import FeaturesSection from '../components/LandingPage/FeaturesSection';
-import ToolsSection from '../components/LandingPage/ToolsSection';
-import GamificationSection from '../components/LandingPage/GamificationSection';
-import PlatformOverviewSection from '../components/LandingPage/PlatformOverviewSection';
-import CourseCategoriesSection from '../components/LandingPage/CourseCategoriesSection';
-import TestimonialsSection from '../components/LandingPage/TestimonialsSection';
-import NewsletterSection from '../components/LandingPage/NewsletterSection';
-import Footer from '../components/LandingPage/Footer';
+
+const Navbar = React.lazy(() => import('../components/LandingPage/Navbar'));
+const HeroSection = React.lazy(() => import('../components/LandingPage/HeroSection'));
+const FeaturesSection = React.lazy(() => import('../components/LandingPage/FeaturesSection'));
+const ToolsSection = React.lazy(() => import('../components/LandingPage/ToolsSection'));
+const GamificationSection = React.lazy(() => import('../components/LandingPage/GamificationSection'));
+const PlatformOverviewSection = React.lazy(() => import('../components/LandingPage/PlatformOverviewSection'));
+const CourseCategoriesSection = React.lazy(() => import('../components/LandingPage/CourseCategoriesSection'));
+const TestimonialsSection = React.lazy(() => import('../components/LandingPage/TestimonialsSection'));
+const NewsletterSection = React.lazy(() => import('../components/LandingPage/NewsletterSection'));
+const Footer = React.lazy(() => import('../components/LandingPage/Footer'));
 
 const LandingPage = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -64,38 +65,52 @@ const LandingPage = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-green-900 overflow-hidden" role="main" aria-label="Loading EduPulse">
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-4xl font-bold text-white"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="mb-12"
-            aria-hidden="true"
-          >
-            <Sparkles size={56} className="text-blue-400" />
-          </motion.div>
-          EduPulse
-        </motion.div>
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mr-4"></div>
+          <span className="text-4xl font-bold text-white">EduPulse</span>
+        </div>
       </div>
     );
   }
 
+  const LoadingSpinner = () => (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 to-green-900 overflow-x-hidden" role="main">
-      <Navbar />
-      <HeroSection />
-      <FeaturesSection />
-      <ToolsSection />
-      <GamificationSection />
-      <PlatformOverviewSection />
-      <CourseCategoriesSection />
-      <TestimonialsSection />
-      <NewsletterSection />
-      <Footer />
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <Navbar />
+      </React.Suspense>
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <HeroSection />
+      </React.Suspense>
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <FeaturesSection />
+      </React.Suspense>
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <ToolsSection />
+      </React.Suspense>
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <GamificationSection />
+      </React.Suspense>
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <PlatformOverviewSection />
+      </React.Suspense>
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <CourseCategoriesSection />
+      </React.Suspense>
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <TestimonialsSection />
+      </React.Suspense>
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <NewsletterSection />
+      </React.Suspense>
+      <React.Suspense fallback={<LoadingSpinner /> }>
+        <Footer />
+      </React.Suspense>
     </div>
   );
 };

@@ -3,19 +3,19 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { useDispatch } from "react-redux";
 
 // ==================== PUBLIC PAGES ====================
-import LandingPage from "./Layout/LandingPage";
+const LandingPage = lazy(() => import("./Layout/LandingPage"));
 const Signup = lazy(() => import("./pages/Signup"));
 const Login = lazy(() => import("./pages/Login"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const OTP = lazy(() => import("./pages/OTP"));
-import Unauthorized from "./pages/Unauthorized";
+const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 
 // ==================== SHARED COMPONENTS ====================
-import HomePage from "./components/home/HomePage";
-import Profile from "./components/Profile";
-import ProfileSettings from "./components/ProfileSettings";
-import TestNavigation from "./components/TestNavigation";
+const HomePage = lazy(() => import("./components/home/HomePage"));
+const Profile = lazy(() => import("./components/Profile"));
+const ProfileSettings = lazy(() => import("./components/ProfileSettings"));
+const TestNavigation = lazy(() => import("./components/TestNavigation"));
 
 // ==================== AUTH & STATE ====================
 import ProtectedRoute from "./components/ProtectedRoute";

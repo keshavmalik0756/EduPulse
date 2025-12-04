@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import apiClient from "../utils/apiClient";
+import apiClient, { setOnUserUpdate } from "../utils/apiClient";
 
 // Token refresh logic
 let isRefreshing = false;
