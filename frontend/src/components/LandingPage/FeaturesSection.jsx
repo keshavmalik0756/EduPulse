@@ -1,3 +1,4 @@
+import React from 'react';
 import SectionTitle from './SectionTitle';
 import FeatureCard from './FeatureCard';
 import { keyFeatures } from './data';

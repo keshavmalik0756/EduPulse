@@ -1,3 +1,4 @@
+import React from 'react';
 import { SiViaplay } from 'react-icons/si';
 import { TbDeviceDesktopAnalytics } from "react-icons/tb";
 import { LiaUikit } from "react-icons/lia";

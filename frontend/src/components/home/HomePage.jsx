@@ -1,3 +1,4 @@
+import React from 'react';
 import HomeNavbar from './HomeNavbar';
 import home from '../../assets/home1.jpg';
 import { SiViaplay } from 'react-icons/si';

@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { HelpCircle, Mail, Shield, Book, BookText, Sparkles, Facebook, Twitter, Instagram, Linkedin, Github, Youtube, LogIn, UserPlus, GraduationCap, Users } from 'lucide-react';

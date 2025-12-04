@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, GraduationCap, BookOpen, Users, BarChart3 } from 'lucide-react';
 
