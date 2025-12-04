@@ -1,5 +1,14 @@
 import { createSlice } from "@reduxjs/toolkit";
-import apiClient, { setOnUserUpdate } from "../utils/apiClient";
+
+// Lazy load apiClient to avoid circular dependency issues
+let apiClient = null;
+const getApiClient = async () => {
+  if (!apiClient) {
+    const module = await import("../utils/apiClient");
+    apiClient = module.default;
+  }
+  return apiClient;
+};
 
 // Token refresh logic
 let isRefreshing = false;
@@ -406,9 +415,10 @@ export const initializeAuth = () => async (dispatch) => {
 
 // --- Thunks ---
 export const register = (Data) => async (dispatch) => {
+  const client = await getApiClient();
   dispatch(authSlice.actions.registerRequest());
   try {
-    const res = await apiClient.post("/auth/register", Data, {
+    const res = await client.post("/auth/register", Data, {
       headers: { "Content-Type": "application/json" },
     });
     dispatch(authSlice.actions.registerSuccess(res.data));
@@ -421,9 +431,10 @@ export const register = (Data) => async (dispatch) => {
 };
 
 export const otpVerification = (email, otp) => async (dispatch) => {
+  const client = await getApiClient();
   dispatch(authSlice.actions.otpVerificationRequest());
   try {
-    const res = await apiClient.post("/auth/verify-otp", { email, otp }, {
+    const res = await client.post("/auth/verify-otp", { email, otp }, {
       headers: { "Content-Type": "application/json" },
     });
     dispatch(authSlice.actions.otpVerificationSuccess(res.data));
@@ -436,6 +447,7 @@ export const otpVerification = (email, otp) => async (dispatch) => {
 };
 
 export const login = (data) => async (dispatch) => {
+  const client = await getApiClient();
   dispatch(authSlice.actions.loginRequest());
   
   // Check rate limiting
@@ -449,7 +461,7 @@ export const login = (data) => async (dispatch) => {
   try {
     // Use retry with backoff for login requests
     const res = await retryWithBackoff(async () => {
-      return await apiClient.post("/auth/login", data, {
+      return await client.post("/auth/login", data, {
         headers: { "Content-Type": "application/json" },
       });
     }, 3, 1000); // 3 retries with exponential backoff starting at 1 second
@@ -473,9 +485,10 @@ export const login = (data) => async (dispatch) => {
 };
 
 export const logout = () => async (dispatch) => {
+  const client = await getApiClient();
   dispatch(authSlice.actions.logoutRequest());
   try {
-    const res = await apiClient.get("/auth/logout");
+    const res = await client.get("/auth/logout");
     dispatch(authSlice.actions.logoutSuccess(res.data.message));
     dispatch(authSlice.actions.resetAuthSlice());
     return res.data;
@@ -487,6 +500,7 @@ export const logout = () => async (dispatch) => {
 };
 
 export const getUser = () => async (dispatch) => {
+  const client = await getApiClient();
   // Check rate limiting
   const rateLimitCheck = canMakeGetUserRequest();
   if (!rateLimitCheck.allowed) {
@@ -506,7 +520,7 @@ export const getUser = () => async (dispatch) => {
   try {
     // Use retry with backoff for user requests
     const res = await retryWithBackoff(async () => {
-      return await apiClient.get("/auth/me");
+      return await client.get("/auth/me");
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
     
     dispatch(authSlice.actions.getUserSuccess(res.data));
@@ -543,11 +557,12 @@ export const getUser = () => async (dispatch) => {
 };
 
 export const forgotPassword = (email) => async (dispatch) => {
+  const client = await getApiClient();
   dispatch(authSlice.actions.forgotPasswordRequest());
   try {
     // Use retry with backoff for forgot password requests
     const res = await retryWithBackoff(async () => {
-      return await apiClient.post("/auth/password/forgot", { email }, {
+      return await client.post("/auth/password/forgot", { email }, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
@@ -569,11 +584,12 @@ export const forgotPassword = (email) => async (dispatch) => {
 };
 
 export const resetPassword = (passwords, token) => async (dispatch) => {
+  const client = await getApiClient();
   dispatch(authSlice.actions.resetPasswordRequest());
   try {
     // Use retry with backoff for reset password requests
     const res = await retryWithBackoff(async () => {
-      return await apiClient.put(`/auth/password/reset/${token}`, passwords, {
+      return await client.put(`/auth/password/reset/${token}`, passwords, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
@@ -595,11 +611,12 @@ export const resetPassword = (passwords, token) => async (dispatch) => {
 };
 
 export const updatePassword = (passwords) => async (dispatch) => {
+  const client = await getApiClient();
   dispatch(authSlice.actions.updatePasswordRequest());
   try {
     // Use retry with backoff for update password requests
     const res = await retryWithBackoff(async () => {
-      return await apiClient.put("/auth/password/update", passwords, {
+      return await client.put("/auth/password/update", passwords, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
@@ -621,11 +638,12 @@ export const updatePassword = (passwords) => async (dispatch) => {
 };
 
 export const resendOTP = (email) => async (dispatch) => {
+  const client = await getApiClient();
   dispatch(authSlice.actions.registerRequest());
   try {
     // Use retry with backoff for resend OTP requests
     const res = await retryWithBackoff(async () => {
-      return await apiClient.post("/auth/resend-otp", { email }, {
+      return await client.post("/auth/resend-otp", { email }, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
@@ -648,15 +666,16 @@ export const resendOTP = (email) => async (dispatch) => {
 
 // Refresh token function
 export const refreshToken = () => async (dispatch) => {
+  const client = await getApiClient();
   try {
-    const refreshToken = localStorage.getItem("refreshToken");
-    if (!refreshToken) {
+    const refreshTokenValue = localStorage.getItem("refreshToken");
+    if (!refreshTokenValue) {
       throw new Error("No refresh token available");
     }
     
     // Use retry with backoff for refresh token requests
     const res = await retryWithBackoff(async () => {
-      return await apiClient.post("/auth/refresh", { token: refreshToken });
+      return await client.post("/auth/refresh", { token: refreshTokenValue });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
     
     const { token: newToken, user: refreshedUser } = res.data;
@@ -665,7 +684,7 @@ export const refreshToken = () => async (dispatch) => {
     localStorage.setItem("token", newToken);
     
     // Update Authorization header
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    client.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     
     // Update user data if provided
     if (refreshedUser) {
@@ -700,10 +719,11 @@ export const refreshToken = () => async (dispatch) => {
 
 // Update user profile function
 export const updateUserProfileData = (profileData) => async (dispatch) => {
+  const client = await getApiClient();
   try {
     // Use retry with backoff for update profile requests
     const res = await retryWithBackoff(async () => {
-      return await apiClient.put("/users/profile", profileData, {
+      return await client.put("/users/profile", profileData, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
