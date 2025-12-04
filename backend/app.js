@@ -28,24 +28,42 @@ const app = express();
 // 🌍 CORS CONFIGURATION
 // ===============================
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:5173",
   "http://localhost:5173",
   "http://localhost:3000",
+  "http://localhost:8080",
   "https://edupulse-theta.vercel.app",
-];
+  process.env.FRONTEND_URL?.replace(/\/$/, ""), // Remove trailing slash
+].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      
+      // Normalize origin by removing trailing slash
+      const normalizedOrigin = origin.replace(/\/$/, "");
+      
+      // Check if origin is allowed
+      const isAllowed = allowedOrigins.some(
+        (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
+      );
+      
+      if (isAllowed) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        console.warn(`CORS blocked origin: ${origin}`);
+        callback(new Error("CORS not allowed"));
       }
     },
     credentials: true,
     optionsSuccessStatus: 200,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+    exposedHeaders: ["Content-Length", "X-JSON-Response-Size"],
   })
 );
 

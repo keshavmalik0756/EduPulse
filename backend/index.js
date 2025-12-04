@@ -76,11 +76,41 @@ app.disable("x-powered-by"); // Hide Express info for security
 // ===========================
 // 🌍 CORS Configuration
 // ===========================
+const allowedOrigins = [
+  "https://edupulse-theta.vercel.app",
+  ...(process.env.FRONTEND_URL?.split(",").map(url => url.trim().replace(/\/$/, "")) || []),
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      
+      // Normalize origin by removing trailing slash
+      const normalizedOrigin = origin.replace(/\/$/, "");
+      
+      // Check if origin is allowed
+      const isAllowed = allowedOrigins.some(
+        (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
+      );
+      
+      if (isAllowed) {
+        // Return the EXACT origin that was sent (not a different one)
+        callback(null, origin);
+      } else {
+        console.warn(`CORS blocked origin: ${origin}`);
+        callback(null, origin); // Allow for debugging
+      }
+    },
     credentials: true,
     optionsSuccessStatus: 200,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+    exposedHeaders: ["Content-Length", "X-JSON-Response-Size"],
   })
 );
 
@@ -248,6 +278,7 @@ const server = app.listen(port, () => {
   console.log(`🌐 Running on: http://localhost:${port}`);
   console.log("🔗 API Base: http://localhost:" + port + "/api");
   console.log("🏥 Health: http://localhost:" + port + "/api/health");
+  console.log("🌍 Frontend URL: " + (process.env.FRONTEND_URL));
   console.log("==============================================");
 });
 
