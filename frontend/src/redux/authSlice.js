@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 
 // Token refresh logic
 let isRefreshing = false;
@@ -121,8 +121,20 @@ const canMakeGetUserRequest = () => {
 const getInitialAuthState = () => {
   const token = localStorage.getItem("token");
   const user = localStorage.getItem("user");
+  let parsedUser = null;
+  
+  if (user && user !== "undefined") {
+    try {
+      parsedUser = JSON.parse(user);
+    } catch (e) {
+      console.warn("Failed to parse user data from localStorage", e);
+      // Clear invalid user data
+      localStorage.removeItem("user");
+    }
+  }
+  
   return {
-    user: user ? JSON.parse(user) : null,
+    user: parsedUser,
     isLoading: token ? true : false, // Set loading to true if token exists
     error: null,
     message: null,
@@ -140,11 +152,14 @@ const authSlice = createSlice({
       if (token) {
         state.isAuthenticated = true;
         state.isLoading = true; // Will fetch user data
-        if (user) {
+        if (user && user !== "undefined") {
           try {
             state.user = JSON.parse(user);
           } catch (e) {
+            console.warn("Failed to parse user data from localStorage in initializeAuth", e);
             state.user = null;
+            // Clear invalid user data
+            localStorage.removeItem("user");
           }
         }
       } else {
@@ -185,7 +200,11 @@ const authSlice = createSlice({
         localStorage.setItem("refreshToken", action.payload.refreshToken);
       }
       // Store user data in localStorage for persistence
-      localStorage.setItem("user", JSON.stringify(action.payload.user));
+      if (action.payload.user) {
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
+      } else {
+        localStorage.removeItem("user");
+      }
       // Store userId separately for easy access
       if (action.payload.user && action.payload.user._id) {
         localStorage.setItem("userId", action.payload.user._id);
@@ -214,7 +233,11 @@ const authSlice = createSlice({
         localStorage.setItem("refreshToken", action.payload.refreshToken);
       }
       // Store user data in localStorage for persistence
-      localStorage.setItem("user", JSON.stringify(action.payload.user));
+      if (action.payload.user) {
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
+      } else {
+        localStorage.removeItem("user");
+      }
       // Store userId separately for easy access
       if (action.payload.user && action.payload.user._id) {
         localStorage.setItem("userId", action.payload.user._id);
@@ -255,7 +278,11 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       state.isAuthenticated = true;
       // Update user data in localStorage
-      localStorage.setItem("user", JSON.stringify(action.payload.user));
+      if (action.payload.user) {
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
+      } else {
+        localStorage.removeItem("user");
+      }
       // Store userId separately for easy access
       if (action.payload.user && action.payload.user._id) {
         localStorage.setItem("userId", action.payload.user._id);
@@ -307,7 +334,11 @@ const authSlice = createSlice({
         localStorage.setItem("refreshToken", action.payload.refreshToken);
       }
       // Store user data in localStorage for persistence
-      localStorage.setItem("user", JSON.stringify(action.payload.user));
+      if (action.payload.user) {
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
+      } else {
+        localStorage.removeItem("user");
+      }
       // Store userId separately for easy access
       if (action.payload.user && action.payload.user._id) {
         localStorage.setItem("userId", action.payload.user._id);
@@ -335,6 +366,8 @@ const authSlice = createSlice({
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
         localStorage.setItem("user", JSON.stringify(state.user));
+      } else {
+        localStorage.removeItem("user");
       }
     },
     resetAuthSlice(state) {
@@ -375,7 +408,7 @@ export const initializeAuth = () => async (dispatch) => {
 export const register = (Data) => async (dispatch) => {
   dispatch(authSlice.actions.registerRequest());
   try {
-    const res = await axios.post("/auth/register", Data, {
+    const res = await apiClient.post("/auth/register", Data, {
       headers: { "Content-Type": "application/json" },
     });
     dispatch(authSlice.actions.registerSuccess(res.data));
@@ -390,7 +423,7 @@ export const register = (Data) => async (dispatch) => {
 export const otpVerification = (email, otp) => async (dispatch) => {
   dispatch(authSlice.actions.otpVerificationRequest());
   try {
-    const res = await axios.post("/auth/verify-otp", { email, otp }, {
+    const res = await apiClient.post("/auth/verify-otp", { email, otp }, {
       headers: { "Content-Type": "application/json" },
     });
     dispatch(authSlice.actions.otpVerificationSuccess(res.data));
@@ -416,7 +449,7 @@ export const login = (data) => async (dispatch) => {
   try {
     // Use retry with backoff for login requests
     const res = await retryWithBackoff(async () => {
-      return await axios.post("/auth/login", data, {
+      return await apiClient.post("/auth/login", data, {
         headers: { "Content-Type": "application/json" },
       });
     }, 3, 1000); // 3 retries with exponential backoff starting at 1 second
@@ -442,7 +475,7 @@ export const login = (data) => async (dispatch) => {
 export const logout = () => async (dispatch) => {
   dispatch(authSlice.actions.logoutRequest());
   try {
-    const res = await axios.get("/auth/logout");
+    const res = await apiClient.get("/auth/logout");
     dispatch(authSlice.actions.logoutSuccess(res.data.message));
     dispatch(authSlice.actions.resetAuthSlice());
     return res.data;
@@ -473,7 +506,7 @@ export const getUser = () => async (dispatch) => {
   try {
     // Use retry with backoff for user requests
     const res = await retryWithBackoff(async () => {
-      return await axios.get("/auth/me");
+      return await apiClient.get("/auth/me");
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
     
     dispatch(authSlice.actions.getUserSuccess(res.data));
@@ -514,7 +547,7 @@ export const forgotPassword = (email) => async (dispatch) => {
   try {
     // Use retry with backoff for forgot password requests
     const res = await retryWithBackoff(async () => {
-      return await axios.post("/auth/password/forgot", { email }, {
+      return await apiClient.post("/auth/password/forgot", { email }, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
@@ -540,7 +573,7 @@ export const resetPassword = (passwords, token) => async (dispatch) => {
   try {
     // Use retry with backoff for reset password requests
     const res = await retryWithBackoff(async () => {
-      return await axios.put(`/auth/password/reset/${token}`, passwords, {
+      return await apiClient.put(`/auth/password/reset/${token}`, passwords, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
@@ -566,7 +599,7 @@ export const updatePassword = (passwords) => async (dispatch) => {
   try {
     // Use retry with backoff for update password requests
     const res = await retryWithBackoff(async () => {
-      return await axios.put("/auth/password/update", passwords, {
+      return await apiClient.put("/auth/password/update", passwords, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
@@ -592,7 +625,7 @@ export const resendOTP = (email) => async (dispatch) => {
   try {
     // Use retry with backoff for resend OTP requests
     const res = await retryWithBackoff(async () => {
-      return await axios.post("/auth/resend-otp", { email }, {
+      return await apiClient.post("/auth/resend-otp", { email }, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
@@ -623,7 +656,7 @@ export const refreshToken = () => async (dispatch) => {
     
     // Use retry with backoff for refresh token requests
     const res = await retryWithBackoff(async () => {
-      return await axios.post("/auth/refresh", { token: refreshToken });
+      return await apiClient.post("/auth/refresh", { token: refreshToken });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
     
     const { token: newToken, user: refreshedUser } = res.data;
@@ -632,7 +665,7 @@ export const refreshToken = () => async (dispatch) => {
     localStorage.setItem("token", newToken);
     
     // Update Authorization header
-    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     
     // Update user data if provided
     if (refreshedUser) {
@@ -642,6 +675,7 @@ export const refreshToken = () => async (dispatch) => {
         localStorage.setItem("userId", refreshedUser._id);
       }
     } else {
+      localStorage.removeItem("user");
       // Fetch updated user data if not provided in refresh response
       await dispatch(getUser());
     }
@@ -669,7 +703,7 @@ export const updateUserProfileData = (profileData) => async (dispatch) => {
   try {
     // Use retry with backoff for update profile requests
     const res = await retryWithBackoff(async () => {
-      return await axios.put("/users/profile", profileData, {
+      return await apiClient.put("/users/profile", profileData, {
         headers: { "Content-Type": "application/json" },
       });
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
