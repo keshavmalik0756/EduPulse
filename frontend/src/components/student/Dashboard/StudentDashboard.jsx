@@ -26,37 +26,11 @@ import {
   Calendar,
   FileText
 } from 'lucide-react';
-import { Pie } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Filler,
-} from "chart.js";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
 import Nav from "../../../Layout/Nav";
 import courseService from '../../../services/courseService';
 import progressService from '../../../services/progressService';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Filler
-);
 
 // Animated StatCard component with solid colors
 const StatCard = ({
@@ -915,25 +889,28 @@ const StudentDashboard = () => {
               Learning Categories
             </h4>
             <div className="h-48">
-              <Pie
-                data={categoryDistributionData}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: "right",
-                      labels: {
-                        usePointStyle: true,
-                        padding: 10,
-                        font: {
-                          size: 10
-                        },
-                      },
-                    },
-                  },
-                }}
-              />
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryDistributionData.datasets[0].data.map((value, idx) => ({
+                      name: categoryDistributionData.labels[idx],
+                      value: value
+                    }))}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={60}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {categoryDistributionData.datasets[0].backgroundColor.map((color, idx) => (
+                      <Cell key={`cell-${idx}`} fill={color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </motion.article>
 
