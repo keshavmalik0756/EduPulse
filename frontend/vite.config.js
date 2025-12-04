@@ -22,75 +22,76 @@ export default defineConfig(({ mode }) => {
       }
     },
     build: {
-      chunkSizeWarningLimit: 2000, // Increase limit to reduce warnings for necessary large chunks
+      chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            // Vendor chunks - more granular splitting
-            if (id.includes('node_modules')) {
-              // React core libraries
-              if (id.includes('react-dom') || id.includes('react/')) return 'vendor-react-core';
-              if (id.includes('react')) return 'vendor-react';
-              
-              // State management
-              if (id.includes('@reduxjs') || id.includes('redux')) return 'vendor-redux';
-              if (id.includes('react-redux')) return 'vendor-react-redux';
-              
-              // Routing
-              if (id.includes('react-router-dom')) return 'vendor-router-dom';
-              if (id.includes('react-router')) return 'vendor-router';
-              
-              // UI Libraries
-              if (id.includes('framer-motion')) return 'vendor-framer-motion';
-              if (id.includes('recharts')) return 'vendor-recharts';
-              if (id.includes('@headlessui') || id.includes('@radix-ui')) return 'vendor-ui-components';
-              
-              // PDF handling
-              if (id.includes('pdfjs-dist')) return 'vendor-pdfjs';
-              if (id.includes('react-pdf')) return 'vendor-react-pdf';
-              
-              // HTTP clients
-              if (id.includes('axios')) return 'vendor-axios';
-              
-              // Icons
-              if (id.includes('lucide-react') || id.includes('react-icons')) return 'vendor-icons';
-              
-              // Utilities
-              if (id.includes('lodash') || id.includes('ramda')) return 'vendor-utils';
-              if (id.includes('date-fns') || id.includes('moment')) return 'vendor-date';
-              
-              // Other large libraries
-              if (id.includes('chart.js')) return 'vendor-chartjs';
-              if (id.includes('three') || id.includes('@react-three')) return 'vendor-three';
-              
-              return 'vendor-other';
+            // Ensure React core is in its own chunk and loaded first
+            if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+              return 'vendor-react-core';
             }
             
-            // Feature chunks - more granular splitting
-            if (id.includes('student/Dashboard')) return 'student-dashboard';
-            if (id.includes('student/Courses')) return 'student-courses';
-            if (id.includes('student/lectures')) return 'student-lectures';
-            if (id.includes('student/Notes')) return 'student-notes';
-            if (id.includes('student/Assignments')) return 'student-assignments';
-            if (id.includes('student/Progress')) return 'student-progress';
+            // Redux must come after React
+            if (id.includes('node_modules/@reduxjs') || id.includes('node_modules/redux')) {
+              return 'vendor-redux';
+            }
+            if (id.includes('node_modules/react-redux')) {
+              return 'vendor-redux';
+            }
             
-            if (id.includes('educator/Analytics')) return 'educator-analytics';
-            if (id.includes('educator/Notes')) return 'educator-notes';
-            if (id.includes('educator/UI')) return 'educator-layout';
-            if (id.includes('educator/Courses')) return 'educator-courses';
-            if (id.includes('educator/Students')) return 'educator-students';
+            // Router after Redux
+            if (id.includes('node_modules/react-router')) {
+              return 'vendor-router';
+            }
             
-            if (id.includes('admin/Users')) return 'admin-users';
-            if (id.includes('admin/Courses')) return 'admin-courses';
-            if (id.includes('admin/Analytics')) return 'admin-analytics';
-            if (id.includes('admin/Settings')) return 'admin-settings';
+            // Animation
+            if (id.includes('node_modules/framer-motion')) {
+              return 'vendor-framer';
+            }
             
-            if (id.includes('pages/')) return 'auth-pages';
-            if (id.includes('components/home')) return 'home';
-            if (id.includes('components/common')) return 'common-components';
-            if (id.includes('components/LandingPage')) return 'landing-page';
+            // Charts
+            if (id.includes('node_modules/recharts') || id.includes('node_modules/react-chartjs-2')) {
+              return 'vendor-recharts';
+            }
             
-            // Return undefined to let Rollup handle the rest
+            // PDF
+            if (id.includes('node_modules/pdfjs-dist') || id.includes('node_modules/react-pdf')) {
+              return 'vendor-pdf';
+            }
+            
+            // HTTP
+            if (id.includes('node_modules/axios')) {
+              return 'vendor-http';
+            }
+            
+            // Icons - split into smaller chunks
+            if (id.includes('node_modules/lucide-react')) {
+              return 'vendor-lucide';
+            }
+            if (id.includes('node_modules/react-icons')) {
+              return 'vendor-react-icons';
+            }
+            
+            // Utilities
+            if (id.includes('node_modules/uuid') || id.includes('node_modules/lodash')) {
+              return 'vendor-utils';
+            }
+            
+            // Toast notifications
+            if (id.includes('node_modules/react-hot-toast') || id.includes('node_modules/react-toastify')) {
+              return 'vendor-toast';
+            }
+            
+            // Spinners
+            if (id.includes('node_modules/react-spinners')) {
+              return 'vendor-spinners';
+            }
+            
+            // Countup
+            if (id.includes('node_modules/react-countup')) {
+              return 'vendor-countup';
+            }
+            
             return undefined;
           }
         }

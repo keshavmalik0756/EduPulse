@@ -3,11 +3,11 @@ import { motion } from 'framer-motion';
 import SectionTitle from './SectionTitle';
 import { platformOverview } from './data';
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar, Cell, LineChart, Line } from 'recharts';
-import * as LucideIcons from 'lucide-react';
+import { iconRegistry } from '../../utils/iconLoader';
 
 function renderIcon(icon, size = 24) {
-  if (typeof icon === 'string' && LucideIcons[icon]) {
-    const Icon = LucideIcons[icon];
+  if (typeof icon === 'string' && iconRegistry[icon]) {
+    const Icon = iconRegistry[icon];
     return <Icon size={size} />;
   }
   return icon;

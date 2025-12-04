@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { platformTheme } from './theme';
-import * as LucideIcons from 'lucide-react';
+import { iconRegistry } from '../../utils/iconLoader';
 
 const cardStyles = {
   gradient: "bg-gradient-to-br",
@@ -11,8 +11,8 @@ const cardStyles = {
 
 const FeatureCard = ({ icon, title, description, color, delay, index }) => {
   let IconComponent = null;
-  if (typeof icon === 'string' && LucideIcons[icon]) {
-    IconComponent = LucideIcons[icon];
+  if (typeof icon === 'string' && iconRegistry[icon]) {
+    IconComponent = iconRegistry[icon];
   }
   
   return (
