@@ -1,9 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
-// Set base URL for all axios requests
-axios.defaults.baseURL = "http://localhost:8080/api";
-
 // Token refresh logic
 let isRefreshing = false;
 let failedQueue = [];
@@ -19,102 +16,6 @@ const processQueue = (error, token = null) => {
   
   failedQueue = [];
 };
-
-// Add axios interceptor to include token in requests
-axios.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor to handle token expiration and refresh
-axios.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // Handle 401 Unauthorized errors (except for login/refresh requests)
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // Don't retry refresh token requests or login requests
-      if (originalRequest.url.includes('/auth/refresh') || 
-          originalRequest.url.includes('/auth/login') ||
-          originalRequest.url.includes('/auth/register')) {
-        return Promise.reject(error);
-      }
-      
-      if (isRefreshing) {
-        // If already refreshing, queue the request
-        return new Promise(function(resolve, reject) {
-          failedQueue.push({ resolve, reject });
-        }).then(token => {
-          originalRequest.headers['Authorization'] = 'Bearer ' + token;
-          return axios(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
-      }
-      
-      originalRequest._retry = true;
-      isRefreshing = true;
-      
-      try {
-        // Attempt to refresh the token
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (refreshToken) {
-          const response = await axios.post("/auth/refresh", { token: refreshToken });
-          const { token: newToken, user: refreshedUser } = response.data;
-          
-          // Store new token
-          localStorage.setItem("token", newToken);
-          
-          // Update Authorization header
-          axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-          originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-          
-          // Update user data if provided
-          if (refreshedUser) {
-            localStorage.setItem("user", JSON.stringify(refreshedUser));
-          }
-          
-          // Process queued requests
-          processQueue(null, newToken);
-          
-          return axios(originalRequest);
-        } else {
-          // No refresh token, logout user
-          processQueue(error, null);
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
-          // Don't redirect here to avoid infinite loops
-          return Promise.reject(error);
-        }
-      } catch (err) {
-        // Refresh failed, logout user
-        processQueue(err, null);
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-        // Don't redirect here to avoid infinite loops
-        return Promise.reject(err);
-      } finally {
-        isRefreshing = false;
-      }
-    }
-    
-    // Handle 413 Payload Too Large errors
-    if (error.response?.status === 413) {
-      return Promise.reject(new Error('File size too large. Please reduce the file size and try again.'));
-    }
-    
-    return Promise.reject(error);
-  }
-);
 
 // Add rate limiting tracking
 let loginAttemptCount = 0;

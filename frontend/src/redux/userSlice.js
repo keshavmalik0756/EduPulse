@@ -3,35 +3,8 @@ import { createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-// Set base URL for all axios requests
-axios.defaults.baseURL = "http://localhost:8080/api";
-
-// Add axios interceptor to include token in requests
-axios.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor to handle token expiration
-axios.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
+// Remove duplicate axios interceptor setup since it's already handled in apiClient.js
+// axios.defaults.baseURL = "http://localhost:8080/api";
 
 // Helper function for consistent error handling
 const handleApiError = (error, defaultMsg) => {
