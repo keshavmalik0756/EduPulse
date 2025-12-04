@@ -193,6 +193,15 @@ app.get("/api/test", (req, res) => {
 });
 
 // ===========================
+// 🌟 Root Endpoint
+// ===========================
+app.get("/", (req, res) =>
+  res.send(
+    `<h1>Welcome to EduPulse Backend 🎓</h1><p>Visit <a href="/api/health">/api/health</a> for system status.</p>`
+  )
+);
+
+// ===========================
 // 🧾 Error Handling
 // ===========================
 
@@ -228,15 +237,6 @@ app.use("*", (req, res) => {
 
 // Global error handler
 app.use(errorMiddleware);
-
-// ===========================
-// 🌟 Root Endpoint
-// ===========================
-app.get("/", (req, res) =>
-  res.send(
-    `<h1>Welcome to EduPulse Backend 🎓</h1><p>Visit <a href="/api/health">/api/health</a> for system status.</p>`
-  )
-);
 
 // ===========================
 // 🖥️ Server Startup
