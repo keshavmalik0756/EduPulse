@@ -1,0 +1,12 @@
+{
+  "restartable": "rs",
+  "ignore": [".git", "node_modules/", "dist/"],
+  "watch": ["."],
+  "execMap": {
+    "js": "node -r dotenv/config"
+  },
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "ext": "js,json,env"
+}

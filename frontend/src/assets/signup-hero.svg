@@ -1,0 +1,302 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgGradientSignup" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f766e;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#0891b2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    
+    <radialGradient id="avatarGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.2);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0);stop-opacity:0" />
+    </radialGradient>
+    
+    <!-- Filters -->
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="600" fill="url(#bgGradientSignup)"/>
+  
+  <!-- Floating Educational Icons -->
+  <g opacity="0.3">
+    <!-- Books -->
+    <g transform="translate(100, 80)">
+      <rect x="0" y="5" width="15" height="3" rx="1" fill="rgba(255,255,255,0.4)"/>
+      <rect x="0" y="2" width="14" height="3" rx="1" fill="rgba(255,255,255,0.5)"/>
+      <rect x="0" y="-1" width="13" height="3" rx="1" fill="rgba(255,255,255,0.6)"/>
+      <animateTransform attributeName="transform" type="translate" values="100,80; 100,60; 100,80" dur="4s" repeatCount="indefinite"/>
+    </g>
+    
+    <!-- Lightbulb -->
+    <g transform="translate(650, 120)">
+      <circle cx="8" cy="12" r="6" fill="rgba(251,191,36,0.6)"/>
+      <rect x="6" y="17" width="4" height="3" rx="1" fill="rgba(255,255,255,0.4)"/>
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" repeatCount="indefinite"/>
+    </g>
+    
+    <!-- Neural Network -->
+    <g transform="translate(700, 400)" opacity="0.4">
+      <circle cx="10" cy="10" r="2" fill="#3b82f6"/>
+      <circle cx="25" cy="5" r="2" fill="#10b981"/>
+      <circle cx="20" cy="20" r="2" fill="#8b5cf6"/>
+      <line x1="10" y1="10" x2="25" y2="5" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+      <line x1="10" y1="10" x2="20" y2="20" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+      <line x1="25" y1="5" x2="20" y2="20" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    </g>
+  </g>
+  
+  <!-- Signup Form (Left Side) -->
+  <g transform="translate(50, 150)">
+    <!-- Form Container -->
+    <rect x="0" y="0" width="280" height="300" rx="15" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+    
+    <!-- Form Header -->
+    <text x="140" y="35" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="bold">
+      🚀 Start Your Journey
+    </text>
+    
+    <!-- Name Field -->
+    <rect x="25" y="60" width="230" height="35" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="35" y="75" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="10">Full Name</text>
+    <text x="35" y="87" fill="white" font-family="Arial, sans-serif" font-size="12">Alex Johnson</text>
+    
+    <!-- Email Field -->
+    <rect x="25" y="105" width="230" height="35" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="35" y="120" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="10">Email Address</text>
+    <text x="35" y="132" fill="white" font-family="Arial, sans-serif" font-size="12">alex@example.com</text>
+    
+    <!-- Password Field -->
+    <rect x="25" y="150" width="230" height="35" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="35" y="165" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="10">Password</text>
+    <text x="35" y="177" fill="white" font-family="Arial, sans-serif" font-size="12">••••••••••</text>
+    
+    <!-- Role Selection -->
+    <text x="35" y="210" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="12" font-weight="bold">
+      I am a:
+    </text>
+    
+    <rect x="25" y="220" width="70" height="25" rx="12" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="2"/>
+    <text x="60" y="235" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold">
+      Student
+    </text>
+    
+    <rect x="105" y="220" width="70" height="25" rx="12" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <text x="140" y="235" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="10">
+      Educator
+    </text>
+    
+    <!-- Signup Button -->
+    <rect x="25" y="260" width="230" height="40" rx="20" fill="url(#pathGradient)" filter="url(#softGlow)">
+      <animate attributeName="opacity" values="0.9;1;0.9" dur="2s" repeatCount="indefinite"/>
+    </rect>
+    <text x="140" y="283" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="14" font-weight="bold">
+      Create Account
+    </text>
+  </g>
+  
+  <!-- Journey Path (Right Side) -->
+  <g transform="translate(400, 100)">
+    <!-- Path Background -->
+    <text x="150" y="30" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="bold">
+      Your Learning Journey
+    </text>
+    
+    <!-- Step 1: Sign Up -->
+    <g transform="translate(50, 60)">
+      <circle cx="25" cy="25" r="20" fill="url(#avatarGlow)" stroke="#10b981" stroke-width="3"/>
+      <text x="25" y="30" text-anchor="middle" fill="#10b981" font-family="Arial, sans-serif" font-size="16" font-weight="bold">1</text>
+      <text x="25" y="55" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Sign Up</text>
+      <text x="25" y="68" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="9">Create Account</text>
+    </g>
+    
+    <!-- Arrow 1 -->
+    <path d="M 95 85 Q 125 75 155 85" stroke="url(#pathGradient)" stroke-width="3" fill="none" marker-end="url(#arrowhead)">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+    </path>
+    
+    <!-- Step 2: Choose Interests -->
+    <g transform="translate(150, 60)">
+      <circle cx="25" cy="25" r="20" fill="url(#avatarGlow)" stroke="#3b82f6" stroke-width="3"/>
+      <text x="25" y="30" text-anchor="middle" fill="#3b82f6" font-family="Arial, sans-serif" font-size="16" font-weight="bold">2</text>
+      <text x="25" y="55" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Choose Path</text>
+      <text x="25" y="68" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="9">Select Interests</text>
+    </g>
+    
+    <!-- Arrow 2 -->
+    <path d="M 195 85 Q 225 75 255 85" stroke="url(#pathGradient)" stroke-width="3" fill="none">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" delay="0.5s" repeatCount="indefinite"/>
+    </path>
+    
+    <!-- Step 3: Start Learning -->
+    <g transform="translate(250, 60)">
+      <circle cx="25" cy="25" r="20" fill="url(#avatarGlow)" stroke="#8b5cf6" stroke-width="3"/>
+      <text x="25" y="30" text-anchor="middle" fill="#8b5cf6" font-family="Arial, sans-serif" font-size="16" font-weight="bold">3</text>
+      <text x="25" y="55" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Learn</text>
+      <text x="25" y="68" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="9">Start Journey</text>
+    </g>
+  </g>
+  
+  <!-- Diverse Learners -->
+  <g transform="translate(420, 200)">
+    <!-- Learner 1 - Female with Laptop -->
+    <g transform="translate(0, 0)">
+      <circle cx="25" cy="25" r="18" fill="#d4a574"/> <!-- Skin tone 1 -->
+      <!-- Hair -->
+      <path d="M 7 20 Q 25 5 43 20 Q 43 12 25 8 Q 7 12 7 20" fill="#8b4513"/>
+      <!-- Eyes -->
+      <circle cx="20" cy="22" r="1.5" fill="#1f2937"/>
+      <circle cx="30" cy="22" r="1.5" fill="#1f2937"/>
+      <!-- Smile -->
+      <path d="M 18 30 Q 25 35 32 30" stroke="#1f2937" stroke-width="1" fill="none"/>
+      
+      <!-- Body -->
+      <rect x="15" y="43" width="20" height="20" rx="10" fill="#ec4899"/>
+      <!-- Laptop -->
+      <rect x="10" y="63" width="30" height="18" rx="2" fill="#374151"/>
+      <rect x="12" y="65" width="26" height="14" rx="1" fill="#1f2937"/>
+      <rect x="14" y="67" width="22" height="2" rx="1" fill="#3b82f6"/>
+    </g>
+    
+    <!-- Learner 2 - Male with Tablet -->
+    <g transform="translate(80, 20)">
+      <circle cx="25" cy="25" r="18" fill="#8b5a3c"/> <!-- Skin tone 2 -->
+      <!-- Hair -->
+      <path d="M 10 18 Q 25 8 40 18 Q 38 15 25 12 Q 12 15 10 18" fill="#2d1b69"/>
+      <!-- Eyes -->
+      <circle cx="20" cy="22" r="1.5" fill="#1f2937"/>
+      <circle cx="30" cy="22" r="1.5" fill="#1f2937"/>
+      <!-- Smile -->
+      <path d="M 18 30 Q 25 35 32 30" stroke="#1f2937" stroke-width="1" fill="none"/>
+      
+      <!-- Body -->
+      <rect x="15" y="43" width="20" height="20" rx="10" fill="#10b981"/>
+      <!-- Tablet -->
+      <rect x="18" y="63" width="14" height="20" rx="2" fill="#374151"/>
+      <rect x="19" y="65" width="12" height="16" rx="1" fill="#1f2937"/>
+    </g>
+    
+    <!-- Learner 3 - Person with Virtual Whiteboard -->
+    <g transform="translate(160, 10)">
+      <circle cx="25" cy="25" r="18" fill="#f4c2a1"/> <!-- Skin tone 3 -->
+      <!-- Hair -->
+      <path d="M 8 22 Q 25 10 42 22 Q 40 18 25 15 Q 10 18 8 22" fill="#dc2626"/>
+      <!-- Eyes -->
+      <circle cx="20" cy="22" r="1.5" fill="#1f2937"/>
+      <circle cx="30" cy="22" r="1.5" fill="#1f2937"/>
+      <!-- Smile -->
+      <path d="M 18 30 Q 25 35 32 30" stroke="#1f2937" stroke-width="1" fill="none"/>
+      
+      <!-- Body -->
+      <rect x="15" y="43" width="20" height="20" rx="10" fill="#f59e0b"/>
+      <!-- Virtual Whiteboard -->
+      <rect x="5" y="63" width="40" height="25" rx="3" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+      <circle cx="15" cy="73" r="2" fill="#3b82f6"/>
+      <circle cx="25" cy="73" r="2" fill="#10b981"/>
+      <circle cx="35" cy="73" r="2" fill="#f59e0b"/>
+      <line x1="15" y1="73" x2="25" y2="73" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+      <line x1="25" y1="73" x2="35" y2="73" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+    </g>
+  </g>
+  
+  <!-- AI Suggestion Bubbles -->
+  <g transform="translate(500, 350)">
+    <!-- Bubble 1 -->
+    <ellipse cx="40" cy="20" rx="35" ry="15" fill="rgba(59,130,246,0.2)" stroke="rgba(59,130,246,0.4)" stroke-width="1"/>
+    <text x="40" y="18" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="8">
+      🤖 Try JavaScript next!
+    </text>
+    <text x="40" y="26" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-family="Arial, sans-serif" font-size="6">
+      Based on your interests
+    </text>
+    
+    <!-- Bubble 2 -->
+    <ellipse cx="120" cy="40" rx="40" ry="18" fill="rgba(16,185,129,0.2)" stroke="rgba(16,185,129,0.4)" stroke-width="1"/>
+    <text x="120" y="38" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="8">
+      📊 Perfect for data science
+    </text>
+    <text x="120" y="46" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-family="Arial, sans-serif" font-size="6">
+      Personalized recommendation
+    </text>
+    
+    <!-- Animated Connections -->
+    <line x1="75" y1="25" x2="85" y2="35" stroke="rgba(255,255,255,0.3)" stroke-width="1">
+      <animate attributeName="opacity" values="0.2;0.8;0.2" dur="3s" repeatCount="indefinite"/>
+    </line>
+  </g>
+  
+  <!-- Goal Setting Widgets -->
+  <g transform="translate(50, 480)">
+    <rect x="0" y="0" width="200" height="60" rx="10" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+    <text x="100" y="20" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">
+      🎯 Set Your Goals
+    </text>
+    
+    <!-- Goal Items -->
+    <g transform="translate(20, 25)">
+      <circle cx="8" cy="8" r="4" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="1"/>
+      <text x="18" y="12" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="9">
+        Complete 5 courses this month
+      </text>
+      
+      <circle cx="8" cy="22" r="4" fill="rgba(59,130,246,0.3)" stroke="#3b82f6" stroke-width="1"/>
+      <text x="18" y="26" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="9">
+        Master React fundamentals
+      </text>
+    </g>
+  </g>
+  
+  <!-- Roadmap Milestones -->
+  <g transform="translate(600, 480)">
+    <text x="75" y="15" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">
+      🗺️ Learning Roadmap
+    </text>
+    
+    <!-- Milestone Path -->
+    <path d="M 20 25 Q 50 35 80 25 Q 110 15 140 25" stroke="url(#pathGradient)" stroke-width="3" fill="none"/>
+    
+    <!-- Milestones -->
+    <circle cx="20" cy="25" r="6" fill="#10b981"/>
+    <text x="20" y="40" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="8">Basics</text>
+    
+    <circle cx="80" cy="25" r="6" fill="#3b82f6"/>
+    <text x="80" y="40" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="8">Advanced</text>
+    
+    <circle cx="140" cy="25" r="6" fill="rgba(139,92,246,0.5)" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="140" y="40" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Arial, sans-serif" font-size="8">Expert</text>
+  </g>
+  
+  <!-- Floating Motion Lines -->
+  <g opacity="0.2">
+    <path d="M 350 150 Q 450 140 550 150" stroke="rgba(255,255,255,0.3)" stroke-width="2" fill="none">
+      <animate attributeName="opacity" values="0.1;0.4;0.1" dur="4s" repeatCount="indefinite"/>
+    </path>
+    <path d="M 300 300 Q 400 290 500 300" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" fill="none">
+      <animate attributeName="opacity" values="0.1;0.3;0.1" dur="5s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <!-- Pulsing Progress Indicators -->
+  <circle cx="750" cy="150" r="4" fill="rgba(16,185,129,0.6)">
+    <animate attributeName="r" values="2;6;2" dur="2.5s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+  
+  <circle cx="50" cy="350" r="3" fill="rgba(59,130,246,0.6)">
+    <animate attributeName="r" values="1;5;1" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.3;0.7;0.3" dur="3s" repeatCount="indefinite"/>
+  </circle>
+</svg>

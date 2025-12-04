@@ -1,0 +1,168 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="edu2Bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#11998e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#38ef7d;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="edu2Accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="edu2Glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.3);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0);stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="600" fill="url(#edu2Bg)"/>
+  
+  <!-- Floating Particles -->
+  <circle cx="150" cy="120" r="8" fill="rgba(255,255,255,0.2)">
+    <animate attributeName="cy" values="120;100;120" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.2;0.5;0.2" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="650" cy="180" r="6" fill="rgba(255,255,255,0.15)">
+    <animate attributeName="cy" values="180;160;180" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="720" cy="300" r="10" fill="rgba(255,255,255,0.1)">
+    <animate attributeName="cy" values="300;280;300" dur="5s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Main Dashboard Illustration -->
+  <g transform="translate(200, 150)">
+    <!-- Dashboard Container -->
+    <rect x="0" y="0" width="400" height="280" rx="15" fill="rgba(255,255,255,0.95)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+    
+    <!-- Header -->
+    <rect x="0" y="0" width="400" height="50" rx="15" fill="url(#edu2Accent)"/>
+    <rect x="0" y="35" width="400" height="15" fill="url(#edu2Accent)"/>
+    
+    <!-- Header Content -->
+    <circle cx="30" cy="25" r="8" fill="white" opacity="0.9"/>
+    <text x="50" y="30" fill="white" font-family="Arial, sans-serif" font-size="14" font-weight="bold">AI Learning Dashboard</text>
+    
+    <!-- Navigation Dots -->
+    <circle cx="350" cy="25" r="3" fill="rgba(255,255,255,0.7)"/>
+    <circle cx="365" cy="25" r="3" fill="rgba(255,255,255,0.7)"/>
+    <circle cx="380" cy="25" r="3" fill="rgba(255,255,255,0.7)"/>
+    
+    <!-- Content Area -->
+    <!-- Progress Chart -->
+    <g transform="translate(30, 80)">
+      <text x="0" y="0" fill="#4a5568" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Learning Progress</text>
+      
+      <!-- Chart Bars -->
+      <rect x="0" y="20" width="15" height="40" rx="2" fill="#4299e1" opacity="0.8">
+        <animate attributeName="height" values="20;40;20" dur="3s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="25" y="20" width="15" height="60" rx="2" fill="#48bb78" opacity="0.8">
+        <animate attributeName="height" values="40;60;40" dur="3.5s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="50" y="20" width="15" height="35" rx="2" fill="#ed8936" opacity="0.8">
+        <animate attributeName="height" values="25;35;25" dur="4s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="75" y="20" width="15" height="55" rx="2" fill="#9f7aea" opacity="0.8">
+        <animate attributeName="height" values="35;55;35" dur="2.5s" repeatCount="indefinite"/>
+      </rect>
+      
+      <!-- Chart Labels -->
+      <text x="7" y="75" fill="#718096" font-family="Arial, sans-serif" font-size="8">Mon</text>
+      <text x="32" y="75" fill="#718096" font-family="Arial, sans-serif" font-size="8">Tue</text>
+      <text x="57" y="75" fill="#718096" font-family="Arial, sans-serif" font-size="8">Wed</text>
+      <text x="82" y="75" fill="#718096" font-family="Arial, sans-serif" font-size="8">Thu</text>
+    </g>
+    
+    <!-- Course Cards -->
+    <g transform="translate(150, 80)">
+      <text x="0" y="0" fill="#4a5568" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Active Courses</text>
+      
+      <!-- Course 1 -->
+      <rect x="0" y="15" width="100" height="35" rx="8" fill="#e6fffa" stroke="#4fd1c7" stroke-width="1"/>
+      <circle cx="15" cy="27" r="5" fill="#4fd1c7"/>
+      <text x="25" y="30" fill="#234e52" font-family="Arial, sans-serif" font-size="9" font-weight="bold">JavaScript</text>
+      <text x="25" y="40" fill="#4a5568" font-family="Arial, sans-serif" font-size="7">85% Complete</text>
+      
+      <!-- Course 2 -->
+      <rect x="110" y="15" width="100" height="35" rx="8" fill="#fef5e7" stroke="#f6ad55" stroke-width="1"/>
+      <circle cx="125" cy="27" r="5" fill="#f6ad55"/>
+      <text x="135" y="30" fill="#744210" font-family="Arial, sans-serif" font-size="9" font-weight="bold">React</text>
+      <text x="135" y="40" fill="#4a5568" font-family="Arial, sans-serif" font-size="7">62% Complete</text>
+    </g>
+    
+    <!-- AI Insights -->
+    <g transform="translate(30, 160)">
+      <text x="0" y="0" fill="#4a5568" font-family="Arial, sans-serif" font-size="12" font-weight="bold">AI Insights</text>
+      
+      <!-- Insight Cards -->
+      <rect x="0" y="15" width="160" height="25" rx="5" fill="#f0fff4" stroke="#68d391" stroke-width="1"/>
+      <circle cx="12" cy="27" r="3" fill="#68d391"/>
+      <text x="20" y="30" fill="#22543d" font-family="Arial, sans-serif" font-size="8">You're performing 23% above average!</text>
+      
+      <rect x="170" y="15" width="160" height="25" rx="5" fill="#fffaf0" stroke="#f6ad55" stroke-width="1"/>
+      <circle cx="182" cy="27" r="3" fill="#f6ad55"/>
+      <text x="190" y="30" fill="#744210" font-family="Arial, sans-serif" font-size="8">Focus on algorithms for better results</text>
+      
+      <!-- Recommendation -->
+      <rect x="0" y="50" width="330" height="25" rx="5" fill="#f7fafc" stroke="#cbd5e0" stroke-width="1"/>
+      <path d="M 12 62 L 16 58 L 20 62 L 16 66 Z" fill="#4299e1"/>
+      <text x="25" y="65" fill="#2d3748" font-family="Arial, sans-serif" font-size="8">Recommended: Advanced Data Structures Course</text>
+    </g>
+  </g>
+  
+  <!-- AI Brain Illustration -->
+  <g transform="translate(50, 300)">
+    <!-- Brain Shape -->
+    <path d="M 50 30 Q 30 10 10 30 Q 5 50 20 70 Q 40 80 60 70 Q 80 60 85 40 Q 80 20 60 15 Q 55 25 50 30" 
+          fill="url(#edu2Glow)" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+    
+    <!-- Neural Network Lines -->
+    <g stroke="rgba(255,255,255,0.4)" stroke-width="1" fill="none">
+      <line x1="25" y1="35" x2="45" y2="25">
+        <animate attributeName="opacity" values="0.2;0.8;0.2" dur="2s" repeatCount="indefinite"/>
+      </line>
+      <line x1="35" y1="45" x2="55" y2="35">
+        <animate attributeName="opacity" values="0.2;0.8;0.2" dur="2.5s" repeatCount="indefinite"/>
+      </line>
+      <line x1="45" y1="55" x2="65" y2="45">
+        <animate attributeName="opacity" values="0.2;0.8;0.2" dur="3s" repeatCount="indefinite"/>
+      </line>
+    </g>
+    
+    <!-- Neural Nodes -->
+    <circle cx="25" cy="35" r="2" fill="white" opacity="0.8">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="45" cy="25" r="2" fill="white" opacity="0.8">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="65" cy="45" r="2" fill="white" opacity="0.8">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="3s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Floating Achievement Badges -->
+  <g transform="translate(600, 350)">
+    <!-- Badge 1 -->
+    <circle cx="20" cy="20" r="15" fill="#ffd700" opacity="0.9"/>
+    <text x="20" y="25" text-anchor="middle" fill="#744210" font-family="Arial, sans-serif" font-size="12" font-weight="bold">★</text>
+    
+    <animateTransform attributeName="transform" type="translate" values="600,350; 600,330; 600,350" dur="4s" repeatCount="indefinite"/>
+  </g>
+  
+  <g transform="translate(650, 400)">
+    <!-- Badge 2 -->
+    <circle cx="15" cy="15" r="12" fill="#48bb78" opacity="0.9"/>
+    <text x="15" y="19" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold">✓</text>
+    
+    <animateTransform attributeName="transform" type="translate" values="650,400; 650,380; 650,400" dur="3.5s" repeatCount="indefinite"/>
+  </g>
+  
+  <!-- Text Elements -->
+  <text x="400" y="500" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24" font-weight="bold" opacity="0.95">
+    AI-Powered Learning Analytics
+  </text>
+  <text x="400" y="530" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="16">
+    Smart recommendations • Performance insights • Adaptive learning paths
+  </text>
+</svg>
