@@ -68,6 +68,7 @@ const port = process.env.PORT || 8080;
 // ===========================
 // 🔐 Security Middleware
 // ===========================
+app.set("trust proxy", 1); // Trust proxy headers (for Render.com, Heroku, etc.)
 app.use(helmet());
 app.use(mongoSanitize());
 app.disable("x-powered-by"); // Hide Express info for security
