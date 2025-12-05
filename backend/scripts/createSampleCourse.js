@@ -284,7 +284,7 @@ const main = async () => {
         console.log('\n🎉 Sample course creation completed!');
         console.log('🌐 You can now view this course in your application');
         console.log('📱 Frontend URL: http://localhost:5173/educator/courses');
-        console.log('🔗 API URL: http://localhost:8080/api/courses');
+        console.log('🔗 API URL: https://edupulse-ko2w.onrender.com/api/courses');
 
         process.exit(0);
     } catch (error) {

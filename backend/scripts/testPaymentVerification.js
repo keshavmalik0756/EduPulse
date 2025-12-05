@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://edupulse-ko2w.onrender.com/api';
 
 // Test data - replace with actual values from your test
 const TEST_DATA = {

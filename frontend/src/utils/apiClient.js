@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { toast } from "react-hot-toast";
 
 // ====================== CONFIG ======================
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+const BASE_URL = import.meta.env.VITE_API_URL || "https://edupulse-ko2w.onrender.com/api";
 let isRefreshing = false;
 let failedQueue = [];
 

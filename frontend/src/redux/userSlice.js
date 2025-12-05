@@ -4,7 +4,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 // Remove duplicate axios interceptor setup since it's already handled in apiClient.js
-// axios.defaults.baseURL = "http://localhost:8080/api";
+// axios.defaults.baseURL = "https://edupulse-ko2w.onrender.com/api";
 
 // Helper function for consistent error handling
 const handleApiError = (error, defaultMsg) => {

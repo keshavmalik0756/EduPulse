@@ -5,7 +5,7 @@ const testCORS = async () => {
     console.log('Testing CORS from http://localhost:5173...');
     
     const response = await axios.post(
-      'http://localhost:8080/api/auth/login',
+      'https://edupulse-ko2w.onrender.com/api/auth/login',
       { email: 'test@example.com', password: 'test' },
       {
         headers: {

@@ -29,7 +29,8 @@ function CardPage() {
             try {
                 setLoading(true);
                 // Try to get published courses from API
-                const response = await fetch('http://localhost:8080/api/courses/getpublished');
+                const apiUrl = `${import.meta.env.VITE_API_URL}/courses/getpublished`;
+                const response = await fetch(apiUrl);
                 if (response.ok) {
                     const data = await response.json();
                     console.log('API Response:', data); // Debug log

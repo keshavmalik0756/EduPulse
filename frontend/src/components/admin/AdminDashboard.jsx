@@ -38,7 +38,7 @@ const AdminDashboard = () => {
       }
 
       try {
-        const response = await axios.get("http://localhost:8080/api/auth/me", {
+        const response = await axios.get("https://edupulse-ko2w.onrender.com/api/auth/me", {
           headers: {
             Authorization: `Bearer ${token}`
           }
