@@ -79,16 +79,25 @@ const courseService = {
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
+      console.log('Returning cached creator courses');
       return cached;
     }
     
     try {
       const result = await withRetry(async () => {
+        console.log('Fetching creator courses from API');
         const response = await apiClient.get("/courses/getcreatorcourses");
         const { data } = response;
         
+        // Validate response
+        if (!data) {
+          throw new Error('No data received from server');
+        }
+        
         // Ensure we always return a consistent structure
         const courses = processApiResponse(data)?.courses || [];
+        console.log(`Received ${courses.length} courses from API`);
+        
         return {
           success: data?.success ?? true,
           count: courses.length,

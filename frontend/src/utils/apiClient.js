@@ -59,7 +59,9 @@ apiClient.interceptors.request.use(
 
 // ====================== RESPONSE INTERCEPTOR ======================
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 

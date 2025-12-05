@@ -136,6 +136,11 @@ export const getCacheStats = () => {
  * @returns {*} Processed data
  */
 export const processApiResponse = (data) => {
+  // Handle null or undefined data
+  if (data === null || data === undefined) {
+    return null;
+  }
+  
   // Handle cached responses from backend (marked with fromCache flag)
   if (data?.data && data?.fromCache) {
     // Return the actual data, removing the cache wrapper

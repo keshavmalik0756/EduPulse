@@ -78,6 +78,7 @@ app.disable("x-powered-by"); // Hide Express info for security
 // ===========================
 const allowedOrigins = [
   "https://edupulse-theta.vercel.app",
+  "https://edupulse-ko2w.onrender.com",
   ...(process.env.FRONTEND_URL?.split(",").map(url => url.trim().replace(/\/$/, "")) || []),
 ].filter(Boolean);
 
@@ -103,7 +104,9 @@ app.use(
         callback(null, origin);
       } else {
         console.warn(`CORS blocked origin: ${origin}`);
-        callback(null, origin); // Allow for debugging
+        // In production, we should reject the request
+        // But for debugging purposes, we'll allow it
+        callback(null, origin);
       }
     },
     credentials: true,

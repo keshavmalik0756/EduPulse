@@ -31,71 +31,80 @@ const transformCourses = (coursesData = []) => {
     } else if (coursesData && typeof coursesData === 'object' && coursesData.data && Array.isArray(coursesData.data)) {
       coursesData = coursesData.data;
     } else {
+      console.warn('Unexpected courses data format:', coursesData);
       return [];
     }
   }
   
-  return coursesData.map(course => ({
-    id: course._id,
-    title: course.title,
-    subTitle: course.subTitle,
-    description: course.description,
-    students: course.totalEnrolled || 0,
-    status: course.isPublished ? 'published' : 'draft',
-    lastUpdated: new Date(course.updatedAt).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }),
-    lastUpdatedRaw: course.updatedAt, // For accurate sorting
-    thumbnail: course.thumbnail,
-    banner: course.banner,
-    previewVideo: course.previewVideo,
-    price: course.price,
-    finalPrice: course.finalPrice,
-    originalPrice: course.originalPrice || course.price,
-    discount: course.discount,
-    discountPercentage: course.discountPercentage || course.discount,
-    savings: course.savings || (course.discount > 0 ? course.price - course.finalPrice : 0),
-    rating: course.averageRating || 0,
-    reviewsCount: course.reviewsCount || 0,
-    category: course.category,
-    subCategory: course.subCategory,
-    tags: course.tags || [],
-    duration: course.durationWithUnit ?? course.durationFormatted ?? `${course.totalDurationMinutes || 0} minutes`,
-    totalDurationMinutes: course.totalDurationMinutes || 0,
-    level: course.level || 'beginner', // Default to beginner if not provided
-    views: course.views || 0,
-    completionRate: course.completionRate || 0,
-    revenue: course.revenue || 0,
-    modules: course.totalSections || course.sections?.length || 0,
-    lessons: course.totalLectures || course.lectures?.length || 0,
-    lectures: course.totalLectures || course.lectures?.length || 0,
-    sections: course.sections || [],
-    quizzes: 0, // Not in current model
-    assignments: 0, // Not in current model
-    certificate: course.hasCertificate,
-    hasCertificate: course.hasCertificate,
-    publishedDate: course.publishedDate ? new Date(course.publishedDate).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }) : null,
-    createdAt: course.createdAt,
-    updatedAt: course.updatedAt,
-    instructor: course.creator?.name || 'Unknown',
-    creatorId: course.creator?._id || course.creator,
-    language: course.language || 'English',
-    isFeatured: course.isFeatured || false,
-    enrollmentStatus: course.enrollmentStatus || 'open',
-    prerequisites: course.prerequisites || [],
-    learningOutcomes: course.learningOutcomes || [],
-    requirements: course.requirements || [],
-    slug: course.slug,
-    metaTitle: course.metaTitle,
-    metaDescription: course.metaDescription,
-    notesCount: course.notesCount || 0 // Add notes count to the course data
-  }));
+  return coursesData.map(course => {
+    // Ensure course is an object
+    if (!course || typeof course !== 'object') {
+      console.warn('Invalid course data:', course);
+      return {};
+    }
+    
+    return {
+      id: course._id || course.id || '',
+      title: course.title || 'Untitled Course',
+      subTitle: course.subTitle || '',
+      description: course.description || '',
+      students: course.totalEnrolled || 0,
+      status: course.isPublished ? 'published' : 'draft',
+      lastUpdated: course.updatedAt ? new Date(course.updatedAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }) : 'Unknown',
+      lastUpdatedRaw: course.updatedAt || new Date().toISOString(),
+      thumbnail: course.thumbnail || '',
+      banner: course.banner || '',
+      previewVideo: course.previewVideo || '',
+      price: course.price || 0,
+      finalPrice: course.finalPrice !== undefined ? course.finalPrice : (course.price || 0),
+      originalPrice: course.originalPrice || course.price || 0,
+      discount: course.discount || 0,
+      discountPercentage: course.discountPercentage || course.discount || 0,
+      savings: course.savings || (course.discount > 0 ? (course.price || 0) - (course.finalPrice || 0) : 0),
+      rating: course.averageRating || 0,
+      reviewsCount: course.reviewsCount || 0,
+      category: course.category || 'Uncategorized',
+      subCategory: course.subCategory || '',
+      tags: Array.isArray(course.tags) ? course.tags : [],
+      duration: course.durationWithUnit ?? course.durationFormatted ?? `${course.totalDurationMinutes || 0} minutes`,
+      totalDurationMinutes: course.totalDurationMinutes || 0,
+      level: course.level || 'beginner',
+      views: course.views || 0,
+      completionRate: course.completionRate || 0,
+      revenue: course.revenue || 0,
+      modules: course.totalSections || (Array.isArray(course.sections) ? course.sections.length : 0) || 0,
+      lessons: course.totalLectures || (Array.isArray(course.lectures) ? course.lectures.length : 0) || 0,
+      lectures: course.totalLectures || (Array.isArray(course.lectures) ? course.lectures.length : 0) || 0,
+      sections: Array.isArray(course.sections) ? course.sections : [],
+      quizzes: 0,
+      assignments: 0,
+      certificate: course.hasCertificate || false,
+      hasCertificate: course.hasCertificate || false,
+      publishedDate: course.publishedDate ? new Date(course.publishedDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }) : null,
+      createdAt: course.createdAt || new Date().toISOString(),
+      updatedAt: course.updatedAt || new Date().toISOString(),
+      instructor: (course.creator && course.creator.name) || 'Unknown Instructor',
+      creatorId: (course.creator && course.creator._id) || (course.creator || ''),
+      language: course.language || 'English',
+      isFeatured: course.isFeatured || false,
+      enrollmentStatus: course.enrollmentStatus || 'open',
+      prerequisites: Array.isArray(course.prerequisites) ? course.prerequisites : [],
+      learningOutcomes: Array.isArray(course.learningOutcomes) ? course.learningOutcomes : [],
+      requirements: Array.isArray(course.requirements) ? course.requirements : [],
+      slug: course.slug || '',
+      metaTitle: course.metaTitle || '',
+      metaDescription: course.metaDescription || '',
+      notesCount: course.notesCount || 0
+    };
+  });
 };
 
 function Courses() {
@@ -134,6 +143,11 @@ function Courses() {
         courseService.getCreatorCourses(),
         courseService.getCourseStatistics()
       ]);
+
+      // Check if the responses are valid
+      if (!coursesResponse || !statsResponse) {
+        throw new Error('Invalid response from server');
+      }
 
       // Transform courses data to match frontend expectations
       // Ensure we have a valid array before transforming
@@ -203,6 +217,8 @@ function Courses() {
         navigate('/login');
       } else if (error.response?.status === 403) {
         toast.error('You need educator permissions to view this page.');
+      } else if (error.response?.status === 404) {
+        toast.error('API endpoint not found. Please check your configuration.');
       } else {
         toast.error('Failed to load courses. Please check your connection and try again.');
       }

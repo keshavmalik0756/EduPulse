@@ -318,6 +318,16 @@ export const getPublishedCourses = async (req, res) => {
 // ====================== GET CREATOR'S COURSES ======================
 export const getCreatorCourses = async (req, res) => {
   try {
+    // Validate user
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated"
+      });
+    }
+
+    console.log(`Fetching courses for creator: ${req.user._id}`);
+    
     // This query uses the Compound Index: { creator: 1, isPublished: 1, views: -1 }
     // Find courses by creator (including both published and draft)
     const courseDocs = await Course.find({ creator: req.user._id })
@@ -330,6 +340,8 @@ export const getCreatorCourses = async (req, res) => {
       })
       .sort({ createdAt: -1 }); // Sort by newest first
 
+    console.log(`Found ${courseDocs.length} courses for creator: ${req.user._id}`);
+
     // Always return success, even if no courses found
     if (!courseDocs?.length) {
       return res.status(200).json({
@@ -340,7 +352,15 @@ export const getCreatorCourses = async (req, res) => {
     }
 
     // Convert to objects with virtuals
-    const courses = courseDocs.map(doc => doc.toObject({ virtuals: true }));
+    const courses = courseDocs.map(doc => {
+      if (!doc) return null;
+      try {
+        return doc.toObject({ virtuals: true });
+      } catch (err) {
+        console.error("Error converting document to object:", err);
+        return null;
+      }
+    }).filter(course => course !== null);
 
     // Add virtual properties to each course
     const coursesWithVirtuals = courses.map(course => ({
