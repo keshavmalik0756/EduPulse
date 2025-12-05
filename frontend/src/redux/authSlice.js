@@ -520,7 +520,7 @@ export const getUser = () => async (dispatch) => {
   try {
     // Use retry with backoff for user requests
     const res = await retryWithBackoff(async () => {
-      return await client.get("/auth/me");
+      return await client.get("/auth/me"); // This should be correct
     }, 2, 1500); // 2 retries with exponential backoff starting at 1.5 seconds
     
     dispatch(authSlice.actions.getUserSuccess(res.data));

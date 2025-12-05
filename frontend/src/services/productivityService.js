@@ -69,6 +69,12 @@ const withRetry = async (fn, retries = 2, delay = 800) => {
   try {
     return await fn();
   } catch (error) {
+    // If it's a CORS error, don't retry as it won't help
+    if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+      console.error('CORS error detected, not retrying:', error.message);
+      throw error;
+    }
+    
     const isTransient = 
       error?.response?.status >= 500 || 
       error?.code === "ECONNABORTED" ||
@@ -212,6 +218,24 @@ const productivityService = {
       setCache(cacheKey, result, CACHE_TTL.LONG);
       return result;
     } catch (error) {
+      // If it's a CORS error, provide a more specific message
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        console.error('CORS error fetching productivity history:', error.message);
+        toast.error('Network connectivity issue. Please check your internet connection and try again.');
+        // Fallback to cache if available
+        const cached = getCache(cacheKey);
+        if (cached) {
+          return cached;
+        }
+        return {
+          success: false,
+          data: [],
+          educator: null,
+          message: 'Network connectivity issue. Please check your internet connection and try again.',
+          code: 'CORS_ERROR'
+        };
+      }
+      
       // Fallback to cache if available
       const cached = getCache(cacheKey);
       if (cached) {
@@ -245,6 +269,24 @@ const productivityService = {
       setCache(cacheKey, result, CACHE_TTL.LONG);
       return result;
     } catch (error) {
+      // If it's a CORS error, provide a more specific message
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        console.error('CORS error fetching productivity summary:', error.message);
+        toast.error('Network connectivity issue. Please check your internet connection and try again.');
+        // Fallback to cache if available
+        const cached = getCache(cacheKey);
+        if (cached) {
+          return cached;
+        }
+        return {
+          success: false,
+          data: null,
+          educator: null,
+          message: 'Network connectivity issue. Please check your internet connection and try again.',
+          code: 'CORS_ERROR'
+        };
+      }
+      
       // Fallback to cache if available
       const cached = getCache(cacheKey);
       if (cached) {
@@ -306,6 +348,19 @@ const productivityService = {
       const result = await syncedGetCurrentWeekProductivity();
       return result;
     } catch (error) {
+      // If it's a CORS error, provide a more specific message
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        console.error('CORS error fetching current week productivity:', error.message);
+        toast.error('Network connectivity issue. Please check your internet connection and try again.');
+        return {
+          success: false,
+          data: null,
+          educator: null,
+          message: 'Network connectivity issue. Please check your internet connection and try again.',
+          code: 'CORS_ERROR'
+        };
+      }
+      
       // Fallback to cache if available
       const cached = getCache(CACHE_KEYS.current);
       if (cached) {

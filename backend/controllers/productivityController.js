@@ -157,7 +157,19 @@ export const updateEducatorProductivity = async (req, res) => {
 // Get current week productivity data
 export const getCurrentWeekProductivity = async (req, res) => {
   try {
+    console.log("GET CURRENT WEEK PRODUCTIVITY endpoint called");
+    console.log("User in request:", req.user);
+    
     const educatorId = req.user._id;
+    
+    // Validate user
+    if (!req.user || !req.user._id) {
+      console.log("User not authenticated for productivity");
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated"
+      });
+    }
     
     // Calculate the start of the current week (Monday) with timezone awareness
     // Use UTC timezone as default, but this could be customized per user
@@ -174,6 +186,8 @@ export const getCurrentWeekProductivity = async (req, res) => {
     const weekStartDate = weekStartMoment.toDate();
     const weekEndDate = new Date(weekStartDate);
     weekEndDate.setDate(weekEndDate.getDate() + 7);
+    
+    console.log(`Calculating productivity for educator ${educatorId} from ${weekStartDate} to ${weekEndDate}`);
     
     // Import models dynamically to avoid circular dependencies
     const Course = (await import("../models/courseModel.js")).default;
@@ -213,6 +227,7 @@ export const getCurrentWeekProductivity = async (req, res) => {
     
     // If no data exists, create a new record with calculated values
     if (!productivityData) {
+      console.log("Creating new productivity data");
       productivityData = new Productivity({
         educator: educatorId,
         weekStartDate: weekStartDate,
@@ -227,6 +242,7 @@ export const getCurrentWeekProductivity = async (req, res) => {
       productivityData.determineProductivityCategory();
       await productivityData.save();
     } else {
+      console.log("Updating existing productivity data");
       // Update existing record with latest metrics
       productivityData.coursesCreated = coursesCreated;
       productivityData.lecturesUploaded = lecturesUploaded;
@@ -269,6 +285,7 @@ export const getCurrentWeekProductivity = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error("Error fetching current week productivity data:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch current week productivity data",

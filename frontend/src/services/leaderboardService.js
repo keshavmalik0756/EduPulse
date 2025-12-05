@@ -19,6 +19,12 @@ const withRetry = async (fn, retries = 2, delay = 800) => {
   try {
     return await fn();
   } catch (error) {
+    // If it's a CORS error, don't retry as it won't help
+    if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+      console.error('CORS error detected, not retrying:', error.message);
+      throw error;
+    }
+    
     const isTransient = 
       error?.response?.status >= 500 || 
       error?.code === "ECONNABORTED" ||
@@ -49,7 +55,7 @@ const leaderboardService = {
   // ========================================================================
   // 🏅 GET COURSE LEADERBOARD
   // ========================================================================
-  async getCourseLeaderboard(limit = 10, category = null) {
+  async getLeaderboard(limit = 10, category = null) {
     const cacheKey = CACHE_KEYS.leaderboard(limit, category);
     
     // Check cache first
@@ -58,47 +64,44 @@ const leaderboardService = {
       return cached;
     }
     
-    // Validate limit parameter
-    if (limit && (typeof limit !== 'number' || limit < 1)) {
-      return {
-        success: false,
-        data: [],
-        count: 0,
-        category: category || 'all',
-        message: "Invalid limit parameter. Must be a positive number."
-      };
-    }
-
     try {
       const result = await withRetry(async () => {
+        // Build query parameters
         const params = new URLSearchParams();
-        if (limit) params.append('limit', limit);
+        if (limit) params.append('limit', limit.toString());
         if (category) params.append('category', category);
         
         const response = await apiClient.get(`/leaderboard?${params.toString()}`);
-        const { data } = response;
-        
         return {
-          success: data?.success ?? true,
-          data: processApiResponse(data)?.data,
-          count: data?.count,
-          category: data?.category,
-          message: data?.message
+          success: response?.data?.success ?? true,
+          data: processApiResponse(response?.data)?.leaderboard || [],
+          message: response?.data?.message,
+          lastUpdated: new Date().toISOString()
         };
       });
       
-      // Cache the result with appropriate TTL (5 minutes for leaderboard)
-      setCache(cacheKey, result, CACHE_TTL.MEDIUM);
+      // Cache the result with appropriate TTL (10 minutes for leaderboard)
+      setCache(cacheKey, result, CACHE_TTL.LONG);
       return result;
     } catch (error) {
       const errorInfo = FrontendErrorHandler.handleApiError(error);
-      console.error("Error fetching course leaderboard:", error);
+      console.error("Error fetching leaderboard:", error);
+      
+      // If it's a CORS error, provide a more specific message
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        toast.error('Network connectivity issue. Please check your internet connection and try again.');
+        return {
+          success: false,
+          data: [],
+          message: 'Network connectivity issue. Please check your internet connection and try again.',
+          code: 'CORS_ERROR'
+        };
+      }
+      
       toast.error(errorInfo.message);
       return {
         success: false,
         data: [],
-        count: 0,
-        category: category || 'all',
         message: errorInfo.message,
         code: errorInfo.code
       };

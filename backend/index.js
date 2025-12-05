@@ -82,6 +82,53 @@ const allowedOrigins = [
   ...(process.env.FRONTEND_URL?.split(",").map(url => url.trim().replace(/\/$/, "")) || []),
 ].filter(Boolean);
 
+// Pre-flight OPTIONS handler
+app.options('*', cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    
+    // Normalize origin by removing trailing slash
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    
+    // Check if origin is allowed
+    const isAllowed = allowedOrigins.some(
+      (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
+    );
+    
+    if (isAllowed) {
+      // Return the EXACT origin that was sent (not a different one)
+      callback(null, origin);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      // For production, reject the request
+      callback(new Error(`CORS not allowed for origin: ${origin}`), false);
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type", 
+    "Authorization", 
+    "X-Request-ID",
+    "Cache-Control",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+    "X-HTTP-Method-Override"
+  ],
+  exposedHeaders: [
+    "Content-Length", 
+    "X-JSON-Response-Size",
+    "Cache-Control",
+    "ETag"
+  ],
+}));
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -104,16 +151,29 @@ app.use(
         callback(null, origin);
       } else {
         console.warn(`CORS blocked origin: ${origin}`);
-        // In production, we should reject the request
-        // But for debugging purposes, we'll allow it
-        callback(null, origin);
+        // For production, reject the request
+        callback(new Error(`CORS not allowed for origin: ${origin}`), false);
       }
     },
     credentials: true,
     optionsSuccessStatus: 200,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
-    exposedHeaders: ["Content-Length", "X-JSON-Response-Size"],
+    allowedHeaders: [
+      "Content-Type", 
+      "Authorization", 
+      "X-Request-ID",
+      "Cache-Control",  // Add this missing header
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+      "X-HTTP-Method-Override"
+    ],
+    exposedHeaders: [
+      "Content-Length", 
+      "X-JSON-Response-Size",
+      "Cache-Control",
+      "ETag"
+    ],
   })
 );
 
@@ -176,6 +236,12 @@ connectDB()
 // 🧹 Background Services
 // ===========================
 removeUnverifiedAccounts();
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} from ${req.ip}`);
+  next();
+});
 
 // ===========================
 // 🧩 API Routes
@@ -263,9 +329,15 @@ app.use((error, req, res, next) => {
 
 // Catch-all 404
 app.use("*", (req, res) => {
+  // Log 404 errors for debugging
+  console.log(`404 Not Found: ${req.method} ${req.originalUrl} from ${req.ip}`);
+  
   res.status(404).json({
     success: false,
     message: `❌ Route not found: ${req.originalUrl}`,
+    method: req.method,
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
   });
 });
 

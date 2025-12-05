@@ -127,11 +127,11 @@ class DataSyncManager {
   }
 
   /**
-   * Synchronize data with exponential backoff retry
-   * @param {Function} syncFunction - Function to synchronize data
-   * @param {number} maxRetries - Maximum retry attempts
-   * @param {number} baseDelay - Base delay in milliseconds
-   * @returns {Promise<any>} Synchronized data
+   * Execute a sync function with retry logic
+   * @param {Function} syncFunction - Function to execute
+   * @param {number} maxRetries - Maximum number of retries
+   * @param {number} baseDelay - Base delay between retries
+   * @returns {Promise} Resolves with the result of the sync function
    */
   async syncWithRetry(syncFunction, maxRetries = SYNC_CONFIG.MAX_RETRIES, baseDelay = SYNC_CONFIG.RETRY_DELAY) {
     let lastError;
@@ -142,6 +142,12 @@ class DataSyncManager {
         return result;
       } catch (error) {
         lastError = error;
+        
+        // If it's a CORS error, don't retry as it won't help
+        if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+          console.error('CORS error detected, not retrying:', error.message);
+          throw error;
+        }
         
         // If this is the last attempt, throw the error
         if (attempt === maxRetries) {
@@ -187,7 +193,7 @@ class DataSyncManager {
 
         // Fetch fresh data with retry
         const freshData = await this.syncWithRetry(fetchFunction);
-        
+      
         // Resolve any conflicts with cached data
         const resolvedData = cached 
           ? this.resolveConflict(dataType, cached, freshData, conflictStrategy)
@@ -195,7 +201,7 @@ class DataSyncManager {
 
         // Update cache
         setCache(key, resolvedData, ttl);
-        
+      
         // Update data version tracking
         this.dataVersions.set(key, {
           version: resolvedData?.version || Date.now(),
@@ -207,13 +213,18 @@ class DataSyncManager {
         const errorInfo = FrontendErrorHandler.handleApiError(error);
         console.error(`Error synchronizing data for key ${key}:`, error);
         
+        // If it's a CORS error, provide a more specific message
+        if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+          console.error('CORS error in data sync:', error.message);
+        }
+        
         // Return cached data if available, even if stale
         const cached = getCache(key);
         if (cached) {
           console.warn(`Returning stale cached data for key ${key}`);
           return cached;
         }
-        
+      
         // Re-throw if no cached data available
         throw error;
       }

@@ -318,8 +318,12 @@ export const getPublishedCourses = async (req, res) => {
 // ====================== GET CREATOR'S COURSES ======================
 export const getCreatorCourses = async (req, res) => {
   try {
+    console.log("GET CREATOR COURSES endpoint called");
+    console.log("User in request:", req.user);
+    
     // Validate user
     if (!req.user || !req.user._id) {
+      console.log("User not authenticated");
       return res.status(401).json({
         success: false,
         message: "User not authenticated"
@@ -344,6 +348,7 @@ export const getCreatorCourses = async (req, res) => {
 
     // Always return success, even if no courses found
     if (!courseDocs?.length) {
+      console.log("No courses found for creator");
       return res.status(200).json({
         success: true,
         count: 0,
@@ -840,10 +845,16 @@ export const unenrollCourse = async (req, res) => {
 // ====================== GET COURSE STATISTICS (Creator Dashboard) ======================
 export const getCourseStatistics = async (req, res) => {
   try {
+    console.log("GET COURSE STATISTICS endpoint called");
+    console.log("User in request:", req.user);
+    
     const creatorId = req.user._id;
     const courses = await Course.find({ creator: creatorId }).lean(); // Use lean() for better performance
 
+    console.log(`Found ${courses?.length || 0} courses for statistics`);
+
     if (!courses?.length) {
+      console.log("No courses found for statistics");
       return res.status(200).json({
         success: true,
         stats: {
@@ -917,6 +928,7 @@ export const getCourseStatistics = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Error fetching course statistics:", error);
     res.status(500).json({
       success: false,
       message: `Failed to fetch statistics: ${error.message}`,

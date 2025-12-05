@@ -244,7 +244,7 @@ export const verifyOTP = catchAsyncErrors(async (req, res, next) => {
     console.log(`✅ User ${email} verified successfully`);
     
     // Use sendToken utility to generate token and send response
-    sendToken(user, 200, "Account verified successfully.", res);
+    sendToken(user, 200, res);
   } catch (error) {
     console.error("❌ OTP verification error:", error);
     return next(
@@ -257,35 +257,47 @@ export const verifyOTP = catchAsyncErrors(async (req, res, next) => {
    LOGIN
 ======================================================== */
 export const login = catchAsyncErrors(async (req, res, next) => {
-  console.log("📥 Login request received:", req.body);
-  const { email, password } = req.body;
-  
-  if (!email || !password) {
-    console.log("❌ Missing fields:", { email: !!email, password: !!password });
-    return next(new ErrorHandler("Please enter all fields.", 400));
+  try {
+    console.log("📥 Login request received:", req.body);
+    const { email, password } = req.body;
+    console.log("🔐 Login attempt:", { email, passwordLength: password?.length });
+
+    // Validation
+    if (!email || !password) {
+      console.log("❌ Missing login credentials");
+      return next(new ErrorHandler("Please provide email and password", 400));
+    }
+
+    // Find user and include password for comparison
+    const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
+    console.log("👤 User lookup result:", !!user);
+
+    if (!user) {
+      console.log("❌ User not found:", email);
+      return next(new ErrorHandler("Invalid email or password", 401));
+    }
+
+    if (!user.accountVerified) {
+      console.log("❌ Account not verified:", email);
+      return next(new ErrorHandler("Please verify your account first", 401));
+    }
+
+    // Check password
+    const isPasswordMatched = await user.comparePassword(password);
+    console.log("🔑 Password match result:", isPasswordMatched);
+
+    if (!isPasswordMatched) {
+      console.log("❌ Invalid password for user:", email);
+      return next(new ErrorHandler("Invalid email or password", 401));
+    }
+
+    // Send token and user data
+    sendToken(user, 200, res);
+    console.log("✅ Login successful for user:", email);
+  } catch (error) {
+    console.error("💥 Login error:", error);
+    return next(new ErrorHandler("Login failed. Please try again.", 500));
   }
-
-  console.log("🔍 Looking for user with email:", email);
-  const user = await User.findOne({
-    email: email.toLowerCase(),
-    accountVerified: true,
-  }).select("+password");
-
-  if (!user) {
-    console.log("❌ User not found or not verified:", email);
-    return next(new ErrorHandler("Invalid email or password.", 400));
-  }
-
-  console.log("🔒 Comparing passwords...");
-  const isPasswordMatched = await bcrypt.compare(password, user.password);
-  if (!isPasswordMatched) {
-    console.log("❌ Password mismatch for user:", email);
-    return next(new ErrorHandler("Invalid email or password.", 400));
-  }
-
-  console.log("✅ Login successful for user:", email);
-  // Use sendToken utility to generate token and send response
-  sendToken(user, 200, "User login successful.", res);
 });
 
 /* ========================================================
@@ -307,9 +319,20 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
 });
 
 /* ========================================================
-   GET USER
+   GET USER (ME)
 ======================================================== */
 export const getUser = catchAsyncErrors(async (req, res, next) => {
+  console.log("GET USER endpoint called");
+  console.log("User in request:", req.user);
+  
+  if (!req.user) {
+    console.log("No user found in request");
+    return res.status(401).json({
+      success: false,
+      message: "User not authenticated"
+    });
+  }
+  
   res.status(200).json({
     success: true,
     user: req.user,
@@ -421,7 +444,7 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
   await user.save();
 
   // Use sendToken utility to generate token and send response
-  sendToken(user, 200, "Password reset successfully.", res);
+  sendToken(user, 200, res);
 });
 
 /* ========================================================

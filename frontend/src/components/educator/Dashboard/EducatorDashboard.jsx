@@ -138,8 +138,22 @@ const EducatorDashboard = () => {
       // Make all requests in parallel
       // Productivity data is fetched regardless of courses
       const promises = [
-        productivityService.getCurrentWeekProductivity().catch(() => null),
-        leaderboardService.getLeaderboard(10).catch(() => null)
+        productivityService.getCurrentWeekProductivity().catch((error) => {
+          console.error("Error fetching productivity data:", error);
+          // If it's a CORS error, show a specific message
+          if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+            toast.error('Network connectivity issue. Please check your internet connection and try again.');
+          }
+          return null;
+        }),
+        leaderboardService.getLeaderboard(10).catch((error) => {
+          console.error("Error fetching leaderboard data:", error);
+          // If it's a CORS error, show a specific message
+          if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+            toast.error('Network connectivity issue. Please check your internet connection and try again.');
+          }
+          return null;
+        })
       ];
 
       const [productivityResponse, leaderboardResponse] = await Promise.all(promises);
@@ -153,6 +167,13 @@ const EducatorDashboard = () => {
       }
     } catch (error) {
       // Error fetching advanced analytics
+      console.error("Error fetching advanced analytics:", error);
+      // If it's a CORS error, show a specific message
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        toast.error('Network connectivity issue. Please check your internet connection and try again.');
+      } else {
+        toast.error("Failed to load analytics data. Please try again.");
+      }
     } finally {
       setAnalyticsLoading(false);
     }
@@ -175,8 +196,22 @@ const EducatorDashboard = () => {
 
       // Fetch courses and statistics in parallel
       const [coursesResponse, statsResponse] = await Promise.all([
-        courseService.getCreatorCourses().catch(() => ({ success: false, courses: [] })),
-        courseService.getCourseStatistics().catch(() => ({ success: false, stats: null }))
+        courseService.getCreatorCourses().catch((error) => {
+          console.error("Error fetching creator courses:", error);
+          // If it's a CORS error, show a specific message
+          if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+            toast.error('Network connectivity issue. Please check your internet connection and try again.');
+          }
+          return { success: false, courses: [] };
+        }),
+        courseService.getCourseStatistics().catch((error) => {
+          console.error("Error fetching course statistics:", error);
+          // If it's a CORS error, show a specific message
+          if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+            toast.error('Network connectivity issue. Please check your internet connection and try again.');
+          }
+          return { success: false, stats: null };
+        })
       ]);
 
       // Handle courses response
@@ -184,6 +219,10 @@ const EducatorDashboard = () => {
         setCourses(coursesResponse.courses || []);
       } else {
         setCourses([]);
+        // Show error message if it's not a CORS error (which was already shown)
+        if (!(coursesResponse.message && (coursesResponse.message.includes('CORS') || coursesResponse.message.includes('blocked')))) {
+          toast.error(coursesResponse.message || "Failed to load courses");
+        }
       }
 
       // Always fetch advanced analytics (productivity data is independent of courses)
@@ -194,12 +233,22 @@ const EducatorDashboard = () => {
         setStats(statsResponse.stats);
       } else {
         setStats(null);
+        // Show error message if it's not a CORS error (which was already shown)
+        if (!(statsResponse.message && (statsResponse.message.includes('CORS') || statsResponse.message.includes('blocked')))) {
+          toast.error(statsResponse.message || "Failed to load statistics");
+        }
       }
 
       setLastUpdated(new Date());
     } catch (error) {
       // Silently handle errors without showing user-facing messages
       console.error("Dashboard data fetch error:", error);
+      // If it's a CORS error, show a specific message
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        toast.error('Network connectivity issue. Please check your internet connection and try again.');
+      } else {
+        toast.error("Failed to load dashboard data. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -223,15 +272,26 @@ const EducatorDashboard = () => {
   // Refresh data handler with analytics
   const refreshData = useCallback(async () => {
     setIsRefreshing(true);
-    await fetchDashboardData();
-    
-    // Force refresh all analytics data
-    if (courses && courses.length > 0) {
-      await fetchAdvancedAnalytics(courses);
+    try {
+      await fetchDashboardData();
+      
+      // Force refresh all analytics data
+      if (courses && courses.length > 0) {
+        await fetchAdvancedAnalytics(courses);
+      }
+      
+      toast.success("Dashboard refreshed with latest analytics!");
+    } catch (error) {
+      console.error("Error refreshing dashboard data:", error);
+      // If it's a CORS error, show a specific message
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        toast.error('Network connectivity issue. Please check your internet connection and try again.');
+      } else {
+        toast.error("Failed to refresh dashboard data. Please try again.");
+      }
+    } finally {
+      setIsRefreshing(false);
     }
-    
-    setIsRefreshing(false);
-    toast.success("Dashboard refreshed with latest analytics!");
   }, [fetchDashboardData, fetchAdvancedAnalytics, courses]);
 
   // Listen for course updates
@@ -250,7 +310,13 @@ const EducatorDashboard = () => {
           setCourses(coursesResponse.courses || []);
         }
       } catch (error) {
-        // Error refreshing data
+        console.error("Error refreshing course data:", error);
+        // If it's a CORS error, show a specific message
+        if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+          toast.error('Network connectivity issue. Please check your internet connection and try again.');
+        } else {
+          toast.error("Failed to refresh course data. Please try again.");
+        }
       }
     };
 

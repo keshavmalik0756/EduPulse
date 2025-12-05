@@ -47,10 +47,9 @@ apiClient.interceptors.request.use(
       config.headers["Content-Type"] = "application/json";
     }
 
-    // 🧩 Cache busting for GET
-    if (config.method?.toLowerCase() === "get") {
-      config.headers["Cache-Control"] = "no-cache";
-    }
+    // 🧩 Remove Cache-Control header that's causing CORS issues
+    // The backend will handle caching appropriately
+    delete config.headers["Cache-Control"];
 
     return config;
   },

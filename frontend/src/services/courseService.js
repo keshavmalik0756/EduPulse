@@ -55,15 +55,32 @@ const CACHE_KEYS = {
 };
 
 // ========================== Retry Wrapper (Transient Failures) ================
-const withRetry = async (fn, retries = 2, delay = 800) => {
-  try {
-    return await fn();
-  } catch (error) {
-    if (retries <= 0) throw error;
-    console.warn(`🔄 Retrying request... (${retries} attempts left)`);
-    await new Promise((res) => setTimeout(res, delay));
-    return withRetry(fn, retries - 1, delay * 1.5);
+const withRetry = async (fn, retries = 3, delay = 1000) => {
+  let lastError;
+  
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      
+      // If it's a CORS error, don't retry as it won't help
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        console.error('CORS error detected, not retrying:', error.message);
+        throw error;
+      }
+      
+      // If we've exhausted retries, throw the error
+      if (i === retries) {
+        throw error;
+      }
+      
+      console.warn(`🔄 Retrying request... (${retries - i} attempts left)`, error.message);
+      await new Promise((res) => setTimeout(res, delay * Math.pow(1.5, i)));
+    }
   }
+  
+  throw lastError;
 };
 
 // ============================================================================
@@ -111,7 +128,14 @@ const courseService = {
     } catch (error) {
       const errorInfo = FrontendErrorHandler.handleApiError(error);
       console.error("Error fetching creator courses:", error);
-      toast.error(errorInfo.message);
+      
+      // If it's a CORS error, provide a more specific message
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        toast.error('Network connectivity issue. Please check your internet connection and try again.');
+      } else {
+        toast.error(errorInfo.message);
+      }
+      
       return {
         success: false,
         count: 0,
@@ -174,13 +198,20 @@ const courseService = {
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
+      console.log('Returning cached course statistics');
       return cached;
     }
     
     try {
       const result = await withRetry(async () => {
+        console.log('Fetching course statistics from API');
         const response = await apiClient.get("/courses/stats");
         const { data } = response;
+        
+        // Validate response
+        if (!data) {
+          throw new Error('No data received from server');
+        }
         
         // Ensure we always return a consistent structure with defaults
         const stats = {
@@ -200,7 +231,14 @@ const courseService = {
     } catch (error) {
       const errorInfo = FrontendErrorHandler.handleApiError(error);
       console.error("Error fetching course statistics:", error);
-      toast.error(errorInfo.message);
+      
+      // If it's a CORS error, provide a more specific message
+      if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
+        toast.error('Network connectivity issue. Please check your internet connection and try again.');
+      } else {
+        toast.error(errorInfo.message);
+      }
+      
       return { 
         success: false, 
         stats: { ...defaultStats },

@@ -2,6 +2,16 @@ import ErrorHandler from "../utils/errorHandler.js";
 
 // Error Middleware
 export const errorMiddleware = (err, req, res, next) => {
+  // Log all errors for debugging
+  console.error(`[${new Date().toISOString()}] Error in ${req.method} ${req.path}:`, {
+    message: err.message,
+    stack: err.stack,
+    statusCode: err.statusCode,
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    userId: req.user?._id
+  });
+
   err.message = err.message || "Internal Server Error";
   err.statusCode = err.statusCode || 500;
 
