@@ -31,8 +31,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "http://localhost:8080",
-  "https://edupulse-theta.vercel.app",
-  process.env.FRONTEND_URL?.replace(/\/$/, ""), // Remove trailing slash
+  ...(process.env.FRONTEND_URL?.split(",").map(url => url.trim().replace(/\/$/, "")) || []),
 ].filter(Boolean);
 
 app.use(
