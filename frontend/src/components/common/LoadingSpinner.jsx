@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, GraduationCap, BookOpen, Users, BarChart3 } from 'lucide-react';
+import { Loader2, GraduationCap, BookOpen, Users, BarChart3, Sparkles } from 'lucide-react';
 
 const LoadingSpinner = ({ 
   size = 'md', 
@@ -152,6 +152,100 @@ const LoadingSpinner = ({
     );
   }
 
+  if (variant === 'premium') {
+    return (
+      <div className={`${containerClasses} ${fullScreen ? 'bg-gradient-to-br from-blue-50 via-white to-purple-50 backdrop-blur-md' : 'bg-white/50 backdrop-blur-sm'}`}>
+        <div className="flex flex-col items-center space-y-8">
+          <div className="relative w-32 h-32">
+            {/* Outer rotating ring */}
+            <motion.div
+              className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-l-purple-600"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            />
+            
+            {/* Middle pulsating ring */}
+            <motion.div
+              className="absolute inset-2 rounded-full border-2 border-blue-600/20"
+              animate={{
+                scale: [1, 1.1, 1],
+                opacity: [0.3, 0.6, 0.3],
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
+
+            {/* Inner rotating ring (opposite direction) */}
+            <motion.div
+              className="absolute inset-4 rounded-full border-4 border-transparent border-b-green-500 border-r-blue-500"
+              animate={{ rotate: -360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            />
+
+            {/* Center Pulse Core */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-full flex items-center justify-center shadow-[0_10px_20px_rgba(37,99,235,0.3)]"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  boxShadow: [
+                    "0 10px 20px rgba(37,99,235,0.3)",
+                    "0 20px 40px rgba(168,85,247,0.4)",
+                    "0 10px 20px rgba(37,99,235,0.3)"
+                  ]
+                }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-6 h-6 text-white" />
+              </motion.div>
+            </div>
+
+            {/* Orbiting particles */}
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="absolute w-2 h-2 bg-blue-500 rounded-full"
+                animate={{
+                  rotate: 360,
+                }}
+                style={{
+                  top: '46%',
+                  left: '46%',
+                  originX: '150%',
+                  originY: '150%',
+                }}
+                transition={{
+                  duration: 2 + i,
+                  repeat: Infinity,
+                  ease: "linear"
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="text-center relative">
+            <motion.h2
+              className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-green-600"
+              animate={{
+                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+              }}
+              style={{ backgroundSize: '200% auto' }}
+              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+            >
+              EduPulse
+            </motion.h2>
+            <motion.p
+              className="text-blue-600/60 mt-2 font-semibold tracking-widest uppercase text-xs"
+              animate={{ opacity: [0.6, 1, 0.6] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              {text}
+            </motion.p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Default spinner
   return (
     <div className={containerClasses}>
@@ -221,6 +315,14 @@ export const ButtonLoader = () => (
     size="sm" 
     text="" 
     showIcon={false} 
+  />
+);
+
+export const PremiumLoader = () => (
+  <LoadingSpinner 
+    variant="premium" 
+    text="Initializing Pulse" 
+    fullScreen={true} 
   />
 );
 

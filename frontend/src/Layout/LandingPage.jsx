@@ -26,12 +26,14 @@ const TestimonialsSection = React.lazy(() => import('../components/LandingPage/T
 const NewsletterSection = React.lazy(() => import('../components/LandingPage/NewsletterSection'));
 const Footer = React.lazy(() => import('../components/LandingPage/Footer'));
 
+import LoadingSpinner, { PremiumLoader } from '../components/common/LoadingSpinner';
+
 const LandingPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1500);
+    const timer = setTimeout(() => setIsLoading(false), 2000); // Slightly longer to appreciate the UI
     return () => clearTimeout(timer);
   }, []);
 
@@ -63,52 +65,39 @@ const LandingPage = () => {
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-green-900 overflow-hidden" role="main" aria-label="Loading EduPulse">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mr-4"></div>
-          <span className="text-4xl font-bold text-white">EduPulse</span>
-        </div>
-      </div>
-    );
+    return <PremiumLoader />;
   }
-
-  const LoadingSpinner = () => (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 to-green-900 overflow-x-hidden" role="main">
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="dots" size="lg" /> }>
         <Navbar />
       </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="educational" /> }>
         <HeroSection />
       </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="pulse" /> }>
         <FeaturesSection />
       </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="educational" /> }>
         <ToolsSection />
       </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="pulse" /> }>
         <GamificationSection />
       </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="educational" /> }>
         <PlatformOverviewSection />
       </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="pulse" /> }>
         <CourseCategoriesSection />
       </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="dots" /> }>
         <TestimonialsSection />
       </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="pulse" /> }>
         <NewsletterSection />
       </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner /> }>
+      <React.Suspense fallback={<LoadingSpinner variant="educational" /> }>
         <Footer />
       </React.Suspense>
     </div>
