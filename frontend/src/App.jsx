@@ -39,6 +39,7 @@ const Notes = lazy(() => import("./components/educator/Notes/Notes"));
 import "./App.css";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Toaster } from "react-hot-toast";
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -191,6 +192,7 @@ function App() {
           theme="light"
           className="mt-16"
         />
+        <Toaster position="bottom-right" reverseOrder={false} />
       </div>
     </Router>
   );

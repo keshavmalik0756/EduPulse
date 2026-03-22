@@ -38,19 +38,21 @@ const MAX_GETUSER_ATTEMPTS_PER_MINUTE = 20;
 
 // Utility function to handle API errors consistently
 const handleApiError = (error) => {
-  // Handle 429 Too Many Requests specifically
   if (error.response?.status === 429) {
-    return "Too many requests. Please wait a few minutes before trying again.";
+    return "Rate limit exceeded. Please wait a few moments.";
   }
   
-  // Extract error message from response
+  if (error.code === 'ECONNABORTED') {
+    return "Connection timeout. Please check your internet.";
+  }
+
   const errorMessage = 
     error.response?.data?.message || 
     error.response?.data?.error || 
+    (typeof error.response?.data === 'string' ? error.response.data : null) ||
     error.message || 
     "An unexpected error occurred";
   
-  console.error("API Error:", errorMessage);
   return errorMessage;
 };
 
