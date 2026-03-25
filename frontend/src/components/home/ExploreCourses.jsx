@@ -1,81 +1,128 @@
-import React from 'react';
-import { SiViaplay } from 'react-icons/si';
-import { TbDeviceDesktopAnalytics } from "react-icons/tb";
-import { LiaUikit } from "react-icons/lia";
-import { MdAppShortcut } from "react-icons/md";
-import { FaHackerrank } from "react-icons/fa";
-import { AiFillOpenAI } from "react-icons/ai";
-import { SiGoogledataproc } from "react-icons/si";
-import { SiGoogleanalytics } from "react-icons/si";
-import { GiCyberEye } from "react-icons/gi";
+import React, { useRef } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { Sparkles, ArrowRight } from "lucide-react";
+import PropTypes from 'prop-types';
+import { EXPLORE_CATEGORIES } from "../../constants/homeData";
+
+function Card({ cat }) {
+  const ref = useRef(null);
+
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const smoothX = useSpring(x, { stiffness: 150, damping: 15 });
+  const smoothY = useSpring(y, { stiffness: 150, damping: 15 });
+
+  const rotateX = useTransform(smoothY, [-50, 50], [8, -8]);
+  const rotateY = useTransform(smoothX, [-50, 50], [-8, 8]);
+
+  const handleMove = (e) => {
+    const rect = ref.current.getBoundingClientRect();
+    x.set(e.clientX - rect.left - rect.width / 2);
+    y.set(e.clientY - rect.top - rect.height / 2);
+  };
+
+  const reset = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMove}
+      onMouseLeave={reset}
+      style={{ rotateX, rotateY }}
+      whileHover={{ scale: 1.08, y: -10 }}
+      className="group relative cursor-pointer"
+    >
+      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-gradient-to-br ${cat.glow} blur-2xl`} />
+
+      <div className={`relative aspect-square rounded-[2rem] bg-gradient-to-br ${cat.color} p-6 flex flex-col items-center justify-center gap-4 backdrop-blur-xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.06)]`}>
+
+        <motion.div
+          whileHover={{ scale: 1.2, rotate: 10 }}
+          className="p-4 rounded-2xl bg-white/70 border border-slate-200"
+        >
+          <cat.icon className={`w-10 h-10 ${cat.textColor}`} />
+        </motion.div>
+
+        <span className="text-slate-900 font-bold text-sm text-center">
+          {cat.name}
+        </span>
+
+        <motion.div
+          initial={{ scale: 0 }}
+          whileHover={{ scale: 1 }}
+          className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+Card.propTypes = {
+  cat: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    icon: PropTypes.elementType.isRequired,
+    color: PropTypes.string.isRequired,
+    glow: PropTypes.string.isRequired,
+    textColor: PropTypes.string.isRequired
+  }).isRequired
+};
 
 function ExploreCourses() {
-    return (
-        <div className='w-[100vw] min-h-[50vh] lg:h-[50vh] flex flex-col lg:flex-row items-center justify-center gap-4 px-[30px]'>
-            {/* left/top div */}
-            <div className='w-[100%] lg:w-[350px] lg:h-[100%] h-[400px] flex flex-col items-start justify-center gap-1 md:px-[40px] px-[20px]'>
-                <span className='text-[35px] font-semibold'>Explore</span>
-                <span className='text-[35px] font-semibold'>Our Courses</span>
-                <p className='text-[17px]'>Step into the future of learning. Our intelligent platform personalizes every lesson, helping you master skills faster through smart analytics and real-time insights.</p>
-                <button className='px-[20px] py-[10px] border-2 bg-[black] border-white text-white rounded-[10px] text-[18px] font-light flex gap-2 mt-[40px] cursor-pointer'>
-                    Explore Courses<SiViaplay className='w-[30px] h-[30px] fill-white' />
-                </button>
-            </div>
+  return (
+    <section className="relative w-full py-28 px-6 overflow-hidden bg-white">
 
-            {/* right/bottom div */}
-            <div className='w-[720px] max-w-[90%] lg:h-[300px] md:min-h-[300px] flex items-center justify-center lg:gap-[60px] gap-[50px] flex-wrap mb-[50px] lg:mb-[0px]'>
-                <div className='w-[100px] h-[130px] font-light text-[13px] flex flex-col gap-3 text-center'>
-                    <div className='w-[100px] h-[90px] bg-[#fbd9fb] rounded-lg flex items-center justify-center'>
-                        <TbDeviceDesktopAnalytics className='w-[60px] h-[60px] text-[#6d6c6c]' />
-                    </div>
-                    Web Dev
-                </div>
-                <div className='w-[100px] h-[130px] font-light text-[13px] flex flex-col gap-3 text-center'>
-                    <div className='w-[100px] h-[90px] bg-[#d9fbe0] rounded-lg flex items-center justify-center'>
-                        <LiaUikit className='w-[60px] h-[60px] text-[#6d6c6c]' />
-                    </div>
-                    UI/UX Designing
-                </div>
-                <div className='w-[100px] h-[130px] font-light text-[13px] flex flex-col gap-3 text-center'>
-                    <div className='w-[100px] h-[90px] bg-[#fcb9c8] rounded-lg flex items-center justify-center'>
-                        <MdAppShortcut className='w-[60px] h-[60px] text-[#6d6c6c]' />
-                    </div>
-                    App Dev
-                </div>
-                <div className='w-[100px] h-[130px] font-light text-[13px] flex flex-col gap-3 text-center'>
-                    <div className='w-[100px] h-[90px] bg-[#fbd9fb] rounded-lg flex items-center justify-center'>
-                        <FaHackerrank className='w-[60px] h-[60px] text-[#6d6c6c]' />
-                    </div>
-                    Ethical Hacking
-                </div>
-                <div className='w-[100px] h-[130px] font-light text-[13px] flex flex-col gap-3 text-center'>
-                    <div className='w-[100px] h-[90px] bg-[#d9fbe0] rounded-lg flex items-center justify-center'>
-                        <AiFillOpenAI className='w-[60px] h-[60px] text-[#6d6c6c]' />
-                    </div>
-                    AI/ML
-                </div>
-                <div className='w-[100px] h-[130px] font-light text-[13px] flex flex-col gap-3 text-center'>
-                    <div className='w-[100px] h-[90px] bg-[#fcb9c8] rounded-lg flex items-center justify-center'>
-                        <SiGoogledataproc className='w-[60px] h-[60px] text-[#6d6c6c]' />
-                    </div>
-                    Data Science
-                </div>
-                <div className='w-[100px] h-[130px] font-light text-[13px] flex flex-col gap-3 text-center'>
-                    <div className='w-[100px] h-[90px] bg-[#fbd9fb] rounded-lg flex items-center justify-center'>
-                        <SiGoogleanalytics className='w-[60px] h-[60px] text-[#6d6c6c]' />
-                    </div>
-                    Data Analytics
-                </div>
-                <div className='w-[100px] h-[130px] font-light text-[13px] flex flex-col gap-3 text-center'>
-                    <div className='w-[100px] h-[90px] bg-[#d9fbe0] rounded-lg flex items-center justify-center'>
-                        <GiCyberEye className='w-[60px] h-[60px] text-[#6d6c6c]' />
-                    </div>
-                    Cyber Security
-                </div>
-            </div>
+      <div className="absolute top-1/2 left-1/2 w-[900px] h-[900px] bg-blue-400/10 blur-[150px] -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[700px] h-[700px] bg-emerald-400/10 blur-[140px]" />
+
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-20 relative z-10">
+
+        <motion.div
+          initial={{ opacity: 0, x: -40 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          className="lg:w-1/3 space-y-6"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border text-blue-600 text-xs font-bold uppercase">
+            <Sparkles className="w-3 h-3" />
+            AI Powered Learning
+          </div>
+
+          <h2 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight">
+            Explore <br />
+            <span className="bg-gradient-to-r from-blue-600 via-emerald-500 to-sky-500 bg-clip-text text-transparent">
+              Expert Domains
+            </span>
+          </h2>
+
+          <p className="text-slate-500 text-lg">
+            Unlock intelligent learning paths powered by real-time insights and adaptive AI systems.
+          </p>
+
+          <button className="group px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center gap-3 hover:scale-105 transition shadow-xl">
+            Explore Courses
+            <ArrowRight className="group-hover:translate-x-1 transition" />
+          </button>
+        </motion.div>
+
+        <div className="lg:w-2/3 grid grid-cols-2 sm:grid-cols-4 gap-6 perspective-[1200px]">
+          {EXPLORE_CATEGORIES.map((cat, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.05 }}
+            >
+              <Card cat={cat} />
+            </motion.div>
+          ))}
         </div>
-    )
-
+      </div>
+    </section>
+  );
 }
 
 export default ExploreCourses;

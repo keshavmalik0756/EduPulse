@@ -1,105 +1,74 @@
-/**
- * EduPulse - Modern Educational Platform Landing Page
- * 
- * This file contains the main landing page component with various sections:
- * 1. Hero Section
- * 2. Key Features
- * 3. Study Tools
- * 4. Gamification
- * 5. Platform Overview
- * 6. Newsletter
- * 7. Footer
- */
+import React, { Suspense, lazy } from 'react';
+import { ArrowRight, Zap } from 'lucide-react';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+// Lazy Load Sections for Performance
+const Navbar = lazy(() => import('../components/LandingPage/Navbar'));
+const HeroSection = lazy(() => import('../components/LandingPage/HeroSection'));
+const TopEducators = lazy(() => import('../components/LandingPage/TopEducators'));
+const FeaturesSection = lazy(() => import('../components/LandingPage/FeaturesSection'));
+const CourseDiscovery = lazy(() => import('../components/LandingPage/CourseDiscovery'));
+const GamificationSection = lazy(() => import('../components/LandingPage/GamificationSection'));
+const Footer = lazy(() => import('../components/LandingPage/Footer'));
 
-const Navbar = React.lazy(() => import('../components/LandingPage/Navbar'));
-const HeroSection = React.lazy(() => import('../components/LandingPage/HeroSection'));
-const FeaturesSection = React.lazy(() => import('../components/LandingPage/FeaturesSection'));
-const ToolsSection = React.lazy(() => import('../components/LandingPage/ToolsSection'));
-const GamificationSection = React.lazy(() => import('../components/LandingPage/GamificationSection'));
-const PlatformOverviewSection = React.lazy(() => import('../components/LandingPage/PlatformOverviewSection'));
-const CourseCategoriesSection = React.lazy(() => import('../components/LandingPage/CourseCategoriesSection'));
-const TestimonialsSection = React.lazy(() => import('../components/LandingPage/TestimonialsSection'));
-const NewsletterSection = React.lazy(() => import('../components/LandingPage/NewsletterSection'));
-const Footer = React.lazy(() => import('../components/LandingPage/Footer'));
+// Premium CTA Component
+const CTASection = ({ title, subtitle, buttonText }) => (
+  <div className="relative py-24 overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-sky-500/5 blur-3xl" />
+    <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+      <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight">
+        {title}
+      </h2>
+      <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto font-medium">
+        {subtitle}
+      </p>
+      <button className="group relative inline-flex items-center gap-3 px-10 py-5 bg-slate-900 text-white font-bold rounded-2xl transition-all hover:scale-105 shadow-xl hover:shadow-emerald-500/20">
+        {buttonText}
+        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-sky-500 opacity-0 group-hover:opacity-10 transition-opacity rounded-2xl" />
+      </button>
+    </div>
+  </div>
+);
 
-import LoadingSpinner, { PremiumLoader } from '../components/common/LoadingSpinner';
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-slate-400 font-bold tracking-widest uppercase text-[10px]">EduPulse Loading...</p>
+    </div>
+  </div>
+);
 
 const LandingPage = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [scrollY, setScrollY] = useState(0);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2000); // Slightly longer to appreciate the UI
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Smooth scrolling for anchor links
-  useEffect(() => {
-    const handleAnchorClick = (e) => {
-      const target = e.target.closest('a[href^="#"]');
-      if (target) {
-        e.preventDefault();
-        const href = target.getAttribute('href');
-        const targetElement = document.querySelector(href);
-        if (targetElement) {
-          window.scrollTo({
-            top: targetElement.offsetTop - 80, // Adjust for navbar height
-            behavior: 'smooth'
-          });
-        }
-      }
-    };
-
-    document.addEventListener('click', handleAnchorClick);
-    return () => document.removeEventListener('click', handleAnchorClick);
-  }, []);
-
-  if (isLoading) {
-    return <PremiumLoader />;
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-green-900 overflow-x-hidden" role="main">
-      <React.Suspense fallback={<LoadingSpinner variant="dots" size="lg" /> }>
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-white font-sans selection:bg-sky-500/20 selection:text-sky-900">
+      <Suspense fallback={<LoadingFallback />}>
         <Navbar />
-      </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner variant="educational" /> }>
         <HeroSection />
-      </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner variant="pulse" /> }>
+        
+        <TopEducators />
+        
+        <CTASection 
+          title="Ready to Accelerate Your Career?"
+          subtitle="Join 10,000+ students already mastering AI, Design, and Architecture with our personalized learning engine."
+          buttonText="Start Learning for Free"
+        />
+
         <FeaturesSection />
-      </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner variant="educational" /> }>
-        <ToolsSection />
-      </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner variant="pulse" /> }>
+        <CourseDiscovery />
+
+        <CTASection 
+          title="Your Knowledge Universe Awaits."
+          subtitle="Don't just watch videos. Engage with live classrooms, AI mentors, and a community of high-performers."
+          buttonText="Explore the Curriculum"
+        />
+
         <GamificationSection />
-      </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner variant="educational" /> }>
-        <PlatformOverviewSection />
-      </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner variant="pulse" /> }>
-        <CourseCategoriesSection />
-      </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner variant="dots" /> }>
-        <TestimonialsSection />
-      </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner variant="pulse" /> }>
-        <NewsletterSection />
-      </React.Suspense>
-      <React.Suspense fallback={<LoadingSpinner variant="educational" /> }>
-        <Footer />
-      </React.Suspense>
+        
+        <div className="pt-20">
+           <Footer />
+        </div>
+      </Suspense>
     </div>
   );
 };
