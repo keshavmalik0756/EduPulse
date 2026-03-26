@@ -88,6 +88,8 @@ const courseSchema = new mongoose.Schema(
 
     // 🔹 METRICS
     totalLectures: { type: Number, default: 0 },
+    totalSections: { type: Number, default: 0 },
+    notesCount: { type: Number, default: 0 },
     totalDurationMinutes: { type: Number, default: 0, min: 0 },
     totalEnrolled: { type: Number, default: 0 },
     views: { type: Number, default: 0 },
@@ -235,10 +237,7 @@ courseSchema.virtual("shortDescription").get(function () {
     : this.description;
 });
 
-// 🔹 Total sections count
-courseSchema.virtual("totalSections").get(function () {
-  return this.sections?.length || 0;
-});
+// Total sections count (Removed virtual, now a field)
 
 // 🔹 Enrollment count
 courseSchema.virtual("enrollmentCount").get(function () {
@@ -260,7 +259,7 @@ courseSchema.virtual("durationWithUnit").get(function () {
   if (totalMinutes === 0) return "0 minutes";
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  
+
   if (hours > 0 && minutes > 0) {
     return `${hours} hours ${minutes} minutes`;
   } else if (hours > 0) {
@@ -293,7 +292,7 @@ courseSchema.methods.recalculateRating = async function () {
 courseSchema.methods.recalculateDurationAndLectures = async function () {
   const Lecture = mongoose.model("Lecture");
   const lectures = await Lecture.find({ courseId: this._id });
-  
+
   this.totalLectures = lectures.length;
   this.totalDurationMinutes = Math.round(
     lectures.reduce((acc, l) => acc + (l.duration || 0), 0) / 60

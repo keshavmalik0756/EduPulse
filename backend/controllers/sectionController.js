@@ -27,18 +27,7 @@ const handleDuplicateOrder = async (courseId, order, excludeId = null, session =
   return !!existing;
 };
 
-// ===============================
-// 🔹 Helper: Update Course Metrics
-// ===============================
-const updateCourseMetrics = async (courseId, session = null) => {
-  const sections = await Section.find({ course: courseId, isDeleted: false }).session(session);
-  const totalDuration = sections.reduce((sum, s) => sum + (s.totalDuration || 0), 0);
-  const totalLessons = sections.reduce((sum, s) => sum + (s.totalLessons || 0), 0);
-  await Course.findByIdAndUpdate(courseId, {
-    totalDurationMinutes: totalDuration,
-    totalLectures: totalLessons,
-  }, { session });
-};
+// Note: Course metrics are now handled by Section and Lecture model hooks ($inc)
 
 // ===============================
 // 🔹 CREATE SECTION (Idempotent)
@@ -86,10 +75,7 @@ export const createSection = async (req, res) => {
       { new: true, upsert: true, collation: { locale: "en", strength: 2 } }
     );
 
-    // Ensure the section is added to the course's sections array
-    await Course.findByIdAndUpdate(courseId, {
-      $addToSet: { sections: section._id }
-    });
+    // Course metrics and section linking are now handled by Section.post("save") hook
 
     // Removed logActivity call
 

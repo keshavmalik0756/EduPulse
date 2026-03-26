@@ -70,8 +70,8 @@ const Signup = () => {
             newErrors.password = "Password is required";
         } else if (formData.password.length < 8) {
             newErrors.password = "Minimum 8 characters required";
-        } else if (passwordStrength < 75) {
-            newErrors.password = "Password is too weak";
+        } else if (passwordStrength < 100) {
+            newErrors.password = "Password must include uppercase, number, and special character";
         }
 
         if (formData.password !== formData.confirmPassword) {
@@ -155,14 +155,14 @@ const Signup = () => {
                 </div>
 
                 <AuthInput 
-                    id="fullName"
+                    id="name"
                     type="text"
                     label="Full Name"
                     placeholder="John Doe"
                     icon={User}
-                    value={formData.fullName}
+                    value={formData.name}
                     onChange={handleInputChange}
-                    error={errors.fullName}
+                    error={errors.name}
                     required
                 />
                 <AuthInput 

@@ -90,15 +90,15 @@ app.options('*', cors({
       callback(null, true);
       return;
     }
-    
+
     // Normalize origin by removing trailing slash
     const normalizedOrigin = origin.replace(/\/$/, "");
-    
+
     // Check if origin is allowed
     const isAllowed = allowedOrigins.some(
       (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
     );
-    
+
     if (isAllowed) {
       // Return the EXACT origin that was sent (not a different one)
       callback(null, origin);
@@ -112,8 +112,8 @@ app.options('*', cors({
   optionsSuccessStatus: 200,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: [
-    "Content-Type", 
-    "Authorization", 
+    "Content-Type",
+    "Authorization",
     "X-Request-ID",
     "Cache-Control",
     "X-Requested-With",
@@ -122,7 +122,7 @@ app.options('*', cors({
     "X-HTTP-Method-Override"
   ],
   exposedHeaders: [
-    "Content-Length", 
+    "Content-Length",
     "X-JSON-Response-Size",
     "Cache-Control",
     "ETag"
@@ -137,15 +137,15 @@ app.use(
         callback(null, true);
         return;
       }
-      
+
       // Normalize origin by removing trailing slash
       const normalizedOrigin = origin.replace(/\/$/, "");
-      
+
       // Check if origin is allowed
       const isAllowed = allowedOrigins.some(
         (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
       );
-      
+
       if (isAllowed) {
         // Return the EXACT origin that was sent (not a different one)
         callback(null, origin);
@@ -159,8 +159,8 @@ app.use(
     optionsSuccessStatus: 200,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
-      "Content-Type", 
-      "Authorization", 
+      "Content-Type",
+      "Authorization",
       "X-Request-ID",
       "Cache-Control",  // Add this missing header
       "X-Requested-With",
@@ -169,7 +169,7 @@ app.use(
       "X-HTTP-Method-Override"
     ],
     exposedHeaders: [
-      "Content-Length", 
+      "Content-Length",
       "X-JSON-Response-Size",
       "Cache-Control",
       "ETag"
@@ -331,7 +331,7 @@ app.use((error, req, res, next) => {
 app.use("*", (req, res) => {
   // Log 404 errors for debugging
   console.log(`404 Not Found: ${req.method} ${req.originalUrl} from ${req.ip}`);
-  
+
   res.status(404).json({
     success: false,
     message: `❌ Route not found: ${req.originalUrl}`,

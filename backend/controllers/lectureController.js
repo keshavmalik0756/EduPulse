@@ -5,6 +5,7 @@
 import Lecture from "../models/lectureModel.js";
 import mongoose from "mongoose";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../services/cloudinary.js";
+import LectureProgress from "../models/lectureProgressModel.js";
 // Removed logActivity import
 
 // ===============================
@@ -310,9 +311,10 @@ export const getLectureById = async (req, res) => {
 
     let response = lecture.toObject();
     if (userId) {
-      response.userProgress = lecture.progress.find((p) => p.userId.toString() === userId.toString()) || null;
-      response.completionPercentage = lecture.getCompletionPercentage(userId);
-      response.isCompleted = lecture.isCompletedBy(userId);
+      const prog = await LectureProgress.findOne({ lectureId: id, userId });
+      response.userProgress = prog || null;
+      response.completionPercentage = await lecture.getCompletionPercentage(userId);
+      response.isCompleted = await lecture.isCompletedBy(userId);
     }
 
     res.status(200).json({ success: true, data: response });
@@ -504,10 +506,9 @@ export const updateProgress = async (req, res) => {
 
     await lecture.updateProgress(userId, watchedDuration);
 
-    // Refetch to get updated values
-    const updatedLecture = await Lecture.findById(id);
-    const completionPercentage = updatedLecture.getCompletionPercentage(userId);
-    const isCompleted = updatedLecture.isCompletedBy(userId);
+    // Refetch or use methods to get updated values
+    const completionPercentage = await lecture.getCompletionPercentage(userId);
+    const isCompleted = await lecture.isCompletedBy(userId);
 
     res.status(200).json({
       success: true,

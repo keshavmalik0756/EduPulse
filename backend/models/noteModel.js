@@ -84,6 +84,38 @@ noteSchema.pre("save", async function (next) {
   next();
 });
 
+// 🔹 Post-save: increment notesCount in course
+noteSchema.post("save", async function (doc, next) {
+  try {
+    const Course = mongoose.model("Course");
+    const isNew = doc.isNew || (doc.$__ ? doc.$__.wasNew : false);
+    
+    if (isNew && doc.course) {
+      await Course.findByIdAndUpdate(doc.course, {
+        $inc: { notesCount: 1 }
+      });
+    }
+  } catch (err) {
+    console.error("Error updating course notesCount:", err);
+  }
+  next();
+});
+
+// 🔹 Post-delete: decrement notesCount in course
+noteSchema.post("findOneAndDelete", async function (doc, next) {
+  try {
+    if (doc && doc.course) {
+      const Course = mongoose.model("Course");
+      await Course.findByIdAndUpdate(doc.course, {
+        $inc: { notesCount: -1 }
+      });
+    }
+  } catch (err) {
+    console.error("Error decrementing course notesCount:", err);
+  }
+  next();
+});
+
 // 🧠 Indexes
 noteSchema.index({ lecture: 1, creator: 1 });
 noteSchema.index({ title: "text", description: "text" });

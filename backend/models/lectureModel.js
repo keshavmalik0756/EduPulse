@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import LectureProgress from "./lectureProgressModel.js";
 
 const lectureSchema = new mongoose.Schema(
   {
@@ -141,23 +142,6 @@ const lectureSchema = new mongoose.Schema(
     },
     viewCount: { type: Number, default: 0, min: 0 },
     isActive: { type: Boolean, default: true, index: true },
-
-    // 🧩 User Progress
-    progress: {
-      type: [
-        {
-          userId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-          },
-          watchedDuration: { type: Number, default: 0, min: 0 },
-          isCompleted: { type: Boolean, default: false },
-          lastWatched: { type: Date, default: Date.now },
-        },
-      ],
-      default: [],
-    },
   },
   {
     timestamps: true,
@@ -172,7 +156,6 @@ const lectureSchema = new mongoose.Schema(
 lectureSchema.index({ courseId: 1, sectionId: 1, order: 1 }, { unique: true });
 lectureSchema.index({ courseId: 1, isActive: 1 });
 lectureSchema.index({ courseId: 1, difficulty: 1 });
-lectureSchema.index({ "progress.userId": 1 });
 lectureSchema.index({ createdAt: -1 });
 lectureSchema.index({ title: "text", description: "text" });
 
@@ -195,10 +178,11 @@ lectureSchema.virtual("formattedVideoSize").get(function () {
   return `${(this.videoSize / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 });
 
-lectureSchema.virtual("completionRate").get(function () {
-  if (!this.progress?.length) return 0;
-  const completed = this.progress.filter((p) => p.isCompleted).length;
-  return Math.round((completed / this.progress.length) * 100);
+lectureSchema.virtual("completionRate").get(async function () {
+  const count = await LectureProgress.countDocuments({ lectureId: this._id });
+  if (count === 0) return 0;
+  const completed = await LectureProgress.countDocuments({ lectureId: this._id, isCompleted: true });
+  return Math.round((completed / count) * 100);
 });
 
 //
@@ -220,40 +204,38 @@ lectureSchema.pre("save", async function (next) {
 //
 // 🧮 Instance Methods
 //
-lectureSchema.methods.getCompletionPercentage = function (userId) {
-  if (!this.progress) return 0;
-  const progress = this.progress.find((x) => x.userId.toString() === userId.toString());
+lectureSchema.methods.getCompletionPercentage = async function (userId) {
+  const progress = await LectureProgress.findOne({ 
+    lectureId: this._id, 
+    userId: userId.toString() 
+  });
   if (!progress) return 0;
   return Math.min(Math.round((progress.watchedDuration / this.duration) * 100), 100);
 };
 
-lectureSchema.methods.isCompletedBy = function (userId) {
-  if (!this.progress) return false;
-  const progress = this.progress.find((x) => x.userId.toString() === userId.toString());
+lectureSchema.methods.isCompletedBy = async function (userId) {
+  const progress = await LectureProgress.findOne({ 
+    lectureId: this._id, 
+    userId: userId.toString() 
+  });
   return progress ? progress.isCompleted : false;
 };
 
 lectureSchema.methods.updateProgress = async function (userId, watchedDuration) {
-  if (!this.progress) this.progress = [];
-  const index = this.progress.findIndex((p) => p.userId.toString() === userId.toString());
   const completed = watchedDuration >= this.duration * 0.9;
-
-  if (index !== -1) {
-    this.progress[index].watchedDuration = Math.min(
-      Math.max(this.progress[index].watchedDuration, watchedDuration),
-      this.duration
-    );
-    this.progress[index].isCompleted = completed;
-    this.progress[index].lastWatched = new Date();
-  } else {
-    this.progress.push({
-      userId,
-      watchedDuration: Math.min(watchedDuration, this.duration),
-      isCompleted: completed,
-    });
-  }
-
-  return this.save();
+  
+  return await LectureProgress.findOneAndUpdate(
+    { userId, lectureId: this._id },
+    { 
+      $set: { 
+        watchedDuration: Math.min(watchedDuration, this.duration),
+        isCompleted: completed,
+        lastWatched: new Date(),
+        courseId: this.courseId 
+      }
+    },
+    { upsert: true, new: true }
+  );
 };
 
 lectureSchema.methods.incrementViewCount = function () {
@@ -264,31 +246,36 @@ lectureSchema.methods.incrementViewCount = function () {
 //
 // 📊 Static Methods
 //
-lectureSchema.statics.getByCourse = function (courseId, sectionId = null, userId = null, page = 1, limit = 10) {
+lectureSchema.statics.getByCourse = async function (courseId, sectionId = null, userId = null, page = 1, limit = 10) {
   const query = { courseId, isActive: true };
   if (sectionId) query.sectionId = sectionId;
 
-  return this.find(query)
+  const lectures = await this.find(query)
     .sort({ order: 1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .lean()
-    .then((lectures) => {
-      if (!userId) return lectures;
-      return lectures.map((l) => ({
-        ...l,
-        completionPercentage: l.progress
-          ? Math.min(
-              Math.round(
-                ((l.progress.find((p) => p.userId.toString() === userId.toString())?.watchedDuration || 0) /
-                  l.duration) *
-                  100
-              ),
-              100
-            )
-          : 0,
-      }));
-    });
+    .lean();
+
+  if (!userId) return lectures;
+
+  // Fetch progress for all these lectures in one go to avoid N+1
+  const progressItems = await LectureProgress.find({
+    userId,
+    lectureId: { $in: lectures.map((l) => l._id) }
+  }).lean();
+
+  const progressMap = new Map(progressItems.map(p => [p.lectureId.toString(), p]));
+
+  return lectures.map((l) => {
+    const prog = progressMap.get(l._id.toString());
+    return {
+      ...l,
+      completionPercentage: prog
+        ? Math.min(Math.round((prog.watchedDuration / l.duration) * 100), 100)
+        : 0,
+      isCompleted: prog ? prog.isCompleted : false
+    };
+  });
 };
 
 lectureSchema.statics.getStatistics = function (courseId) {
@@ -312,27 +299,44 @@ lectureSchema.statics.getStatistics = function (courseId) {
 //
 lectureSchema.post("save", async function (doc, next) {
   try {
-    const Course = mongoose.model("Course");
     const Section = mongoose.model("Section");
 
-    await Promise.all([
-      Course.findByIdAndUpdate(doc.courseId, { $addToSet: { lectures: doc._id } }),
-      Section.findByIdAndUpdate(doc.sectionId, { $addToSet: { lessons: doc._id } }),
-    ]);
-
-    // Update section duration in minutes
-    const lectures = await this.constructor
-      .find({ sectionId: doc.sectionId, isActive: true })
-      .select("duration");
-
-    const totalDurationSeconds = lectures.reduce((sum, l) => sum + (l.duration || 0), 0);
-    await Section.findByIdAndUpdate(doc.sectionId, {
-      totalDuration: Math.round(totalDurationSeconds / 60),
-    });
+    // Incremental update of section duration and lesson count
+    // Note: We only increment if it's a new lecture or duration changed
+    
+    // Check if it's a new document
+    const isNew = doc.isNew || (doc.$__ ? doc.$__.wasNew : false);
+    
+    if (isNew) {
+      await Section.findByIdAndUpdate(doc.sectionId, {
+        $inc: { 
+          totalDuration: Math.round(doc.duration / 60),
+          totalLessons: 1 
+        }
+      });
+    }
 
     next();
   } catch (err) {
-    console.error("Error linking lecture to course/section:", err);
+    console.error("Error updating section metrics:", err);
+    next();
+  }
+});
+
+lectureSchema.post("findOneAndDelete", async function (doc, next) {
+  try {
+    if (doc) {
+      const Section = mongoose.model("Section");
+      await Section.findByIdAndUpdate(doc.sectionId, {
+        $inc: { 
+          totalDuration: -Math.round(doc.duration / 60),
+          totalLessons: -1 
+        }
+      });
+    }
+    next();
+  } catch (err) {
+    console.error("Error updating section metrics on delete:", err);
     next();
   }
 });

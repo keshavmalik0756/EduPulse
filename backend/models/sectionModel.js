@@ -44,14 +44,8 @@ const sectionSchema = new mongoose.Schema(
       required: false, // Make it optional since it might not always be available
     },
 
-    // 🔹 Lessons (referenced, not embedded)
-    lessons: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Lecture",
-      },
-    ],
-
+    // 🔹 Lessons (queried via virtual, not stored)
+    
     // 🔹 Section Status
     isPublished: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
@@ -105,70 +99,21 @@ sectionSchema.pre("save", function (next) {
   next();
 });
 
-// 🔹 Pre-save: update lesson counts & duration
-sectionSchema.pre("save", function (next) {
-  this.totalLessons = (this.lessons && this.lessons.length) || 0;
-  // Note: totalDuration will be updated by Lecture model when lectures are added/removed
-  next();
-});
-
-// 🔹 Post-save: Ensure section is linked to course
+// 🔹 Post-save: Ensure section is linked to course and update metrics
 sectionSchema.post("save", async function (doc, next) {
   try {
     const Course = mongoose.model("Course");
     
-    // Ensure the section is added to the course's sections array
-    await Course.findByIdAndUpdate(doc.course, {
-      $addToSet: { sections: doc._id }
-    });
+    // If new section, increment totalSections in course
+    const isNew = doc.isNew || (doc.$__ ? doc.$__.wasNew : false);
+    if (isNew) {
+      await Course.findByIdAndUpdate(doc.course, {
+        $inc: { totalSections: 1 },
+        $addToSet: { sections: doc._id }
+      });
+    }
   } catch (err) {
     console.error("Error linking section to course:", err);
-  }
-  next();
-});
-
-// 🔹 Post-save: auto-update duration when lessons change
-sectionSchema.post("save", async function (doc, next) {
-  try {
-    // Only update duration if lessons array was modified
-    if (doc.isModified("lessons")) {
-      const Lecture = mongoose.model("Lecture");
-      const lectures = await Lecture.find({ 
-        _id: { $in: doc.lessons || [] },
-        isActive: true 
-      }).select("duration");
-      
-      // Sum all lecture durations (in seconds) and convert to minutes
-      const totalDurationSeconds = lectures.reduce(
-        (sum, lecture) => sum + (lecture.duration || 0),
-        0
-      );
-      
-      // Convert seconds to minutes and round
-      doc.totalDuration = Math.round(totalDurationSeconds / 60);
-      await doc.save();
-    }
-    
-    // Update parent course metrics
-    const Course = mongoose.model("Course");
-    const sections = await this.constructor.find({ course: doc.course, isDeleted: false });
-
-    const totalDuration = sections.reduce(
-      (sum, s) => sum + (s.totalDuration || 0),
-      0
-    );
-    const totalLessons = sections.reduce(
-      (sum, s) => sum + (s.totalLessons || 0),
-      0
-    );
-
-    // make sure Course schema has these fields or change keys accordingly
-    await Course.findByIdAndUpdate(doc.course, {
-      totalDurationMinutes: totalDuration,
-      totalLectures: totalLessons,
-    }).exec();
-  } catch (err) {
-    console.error("Error updating section/course metrics:", err);
   }
   next();
 });
@@ -179,25 +124,14 @@ sectionSchema.post("findOneAndDelete", async function (doc) {
   try {
     const Course = mongoose.model("Course");
     
-    // Remove section from course's sections array
+    // Incremental decrement of course metrics
     await Course.findByIdAndUpdate(doc.course, {
-      $pull: { sections: doc._id }
-    });
-    
-    const sections = await this.model.find({ course: doc.course, isDeleted: false });
-    
-    const totalDuration = sections.reduce(
-      (sum, s) => sum + (s.totalDuration || 0),
-      0
-    );
-    const totalLessons = sections.reduce(
-      (sum, s) => sum + (s.totalLessons || 0),
-      0
-    );
-
-    await Course.findByIdAndUpdate(doc.course, {
-      totalDurationMinutes: totalDuration,
-      totalLectures: totalLessons,
+      $pull: { sections: doc._id },
+      $inc: { 
+        totalSections: -1,
+        totalDurationMinutes: -(doc.totalDuration || 0),
+        totalLectures: -(doc.totalLessons || 0)
+      }
     });
   } catch (err) {
     console.error("Error updating course metrics after section deletion:", err);
@@ -220,7 +154,14 @@ sectionSchema.virtual("durationFormatted").get(function () {
 
 // Lesson count virtual (for UI)
 sectionSchema.virtual("lessonCount").get(function () {
-  return this.lessons?.length || 0;
+  return this.totalLessons || 0;
+});
+
+// Lessons virtual (query-based)
+sectionSchema.virtual("lessons", {
+  ref: "Lecture",
+  localField: "_id",
+  foreignField: "sectionId",
 });
 
 // =====================================================

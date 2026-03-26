@@ -14,12 +14,9 @@ import { generatePasswordResetEmailTemplate } from "../utils/emailTemplates.js";
 ======================================================== */
 export const register = catchAsyncErrors(async (req, res, next) => {
   try {
-    console.log("📥 Registration request received:", req.body);
     const { name, email, password, role } = req.body;
-    console.log("📝 Registration attempt:", { name, email, role, passwordLength: password?.length });
 
     if (!name || !email || !password) {
-      console.log("❌ Missing required fields:", { name: !!name, email: !!email, password: !!password });
       return next(new ErrorHandler("Please enter all fields.", 400));
     }
 
@@ -27,14 +24,11 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     
     if (existingUser && existingUser.accountVerified) {
-      console.log("❌ User already registered and verified:", email);
       return next(new ErrorHandler("User already registered with this email.", 400));
     }
 
     // If user exists but not verified, handle re-registration
     if (existingUser && !existingUser.accountVerified) {
-      console.log("🔄 User exists but not verified, updating registration:", email);
-      
       // Check if too many unverified attempts
       const unverifiedAttempts = await User.countDocuments({
         email: email.toLowerCase(),
@@ -42,7 +36,6 @@ export const register = catchAsyncErrors(async (req, res, next) => {
       });
       
       if (unverifiedAttempts >= 5) {
-        console.log("❌ Too many registration attempts:", email);
         return next(
           new ErrorHandler(
             "You have exceeded the number of registration attempts. Please contact support.",
@@ -68,19 +61,16 @@ export const register = catchAsyncErrors(async (req, res, next) => {
       
       // Send verification code via email
       try {
-        console.log("📧 Sending verification email to:", existingUser.email);
         await sendVerificationCode(verificationCode, existingUser.email);
-        console.log("✅ Verification email sent successfully");
         return res.status(200).json({
           success: true,
           message: "Registration updated successfully. Please check your email for verification code.",
         });
       } catch (error) {
-        console.error("❌ Failed to send verification email:", error);
         return res.status(200).json({
           success: true,
           message: "Registration updated successfully. Please contact support for verification.",
-          verificationCode: verificationCode,
+          verificationCode: process.env.NODE_ENV === "development" ? verificationCode : undefined
         });
       }
     }
@@ -88,17 +78,8 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     // Strong password validation (8–16 chars, 1 uppercase, 1 number, 1 special char)
     const passwordRegex =
       /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$/;
-    console.log("Password validation:", {
-      password,
-      matchesRegex: passwordRegex.test(password),
-      length: password.length,
-      hasUpper: /(?=.*[A-Z])/.test(password),
-      hasDigit: /(?=.*\d)/.test(password),
-      hasSpecial: /(?=.*[@$!%*?&])/.test(password)
-    });
-    
+
     if (!passwordRegex.test(password)) {
-      console.log("❌ Password does not meet requirements:", password);
       return next(
         new ErrorHandler(
           "Password must be 8–16 characters, include 1 uppercase, 1 number, and 1 special character.",
@@ -108,9 +89,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     }
 
     // Hash password
-    console.log("🔒 Hashing password...");
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log("✅ Password hashed successfully");
 
     // Validate role - only allow student or educator
     const validRoles = ["student", "educator"];
@@ -122,36 +101,27 @@ export const register = catchAsyncErrors(async (req, res, next) => {
       password: hashedPassword,
       role: userRole,
     });
-    console.log("✅ User created:", user._id);
 
     // Generate verification code
-    console.log("🔢 Generating verification code...");
     const verificationCode = await user.generateVerificationCode();
     await user.save();
-    console.log("✅ Verification code generated:", verificationCode);
 
     // Send verification code via email
     try {
-      console.log("📧 Sending verification email to:", user.email);
       await sendVerificationCode(verificationCode, user.email);
-      console.log("✅ Verification email sent successfully");
       res.status(200).json({
         success: true,
         message: "User registered successfully. Please check your email for verification code.",
       });
     } catch (error) {
-      console.error("❌ Failed to send verification email:", error);
       // Even if email fails, we still want to register the user
       res.status(200).json({
         success: true,
         message: "User registered successfully. Please contact support for verification.",
-        verificationCode: verificationCode, // Fallback: include code in response
+        verificationCode: process.env.NODE_ENV === "development" ? verificationCode : undefined
       });
     }
   } catch (error) {
-    console.error("❌ Registration error:", error);
-    console.error("Error stack:", error.stack);
-    
     // Handle MongoDB duplicate key error specifically
     if (error.code === 11000) {
       const duplicateKey = Object.keys(error.keyValue)[0];
@@ -221,7 +191,6 @@ export const verifyOTP = catchAsyncErrors(async (req, res, next) => {
     // Convert OTP to number for comparison (handle both string and number inputs)
     const otpNumber = parseInt(otp, 10);
     if (isNaN(otpNumber) || user.verificationCode !== otpNumber) {
-      console.log(`❌ OTP mismatch: Expected ${user.verificationCode}, got ${otp} (${typeof otp})`);
       return next(
         new ErrorHandler(
           "Invalid OTP. Please check your email and try again.",
@@ -241,12 +210,9 @@ export const verifyOTP = catchAsyncErrors(async (req, res, next) => {
     user.verificationCodeExpire = null;
     await user.save({ validateModifiedOnly: true });
 
-    console.log(`✅ User ${email} verified successfully`);
-    
     // Use sendToken utility to generate token and send response
     sendToken(user, 200, res);
   } catch (error) {
-    console.error("❌ OTP verification error:", error);
     return next(
       new ErrorHandler("Internal server error. Please try again.", 500)
     );
@@ -258,44 +224,34 @@ export const verifyOTP = catchAsyncErrors(async (req, res, next) => {
 ======================================================== */
 export const login = catchAsyncErrors(async (req, res, next) => {
   try {
-    console.log("📥 Login request received:", req.body);
     const { email, password } = req.body;
-    console.log("🔐 Login attempt:", { email, passwordLength: password?.length });
 
     // Validation
     if (!email || !password) {
-      console.log("❌ Missing login credentials");
       return next(new ErrorHandler("Please provide email and password", 400));
     }
 
     // Find user and include password for comparison
     const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
-    console.log("👤 User lookup result:", !!user);
 
     if (!user) {
-      console.log("❌ User not found:", email);
       return next(new ErrorHandler("Invalid email or password", 401));
     }
 
     if (!user.accountVerified) {
-      console.log("❌ Account not verified:", email);
       return next(new ErrorHandler("Please verify your account first", 401));
     }
 
     // Check password
     const isPasswordMatched = await user.comparePassword(password);
-    console.log("🔑 Password match result:", isPasswordMatched);
 
     if (!isPasswordMatched) {
-      console.log("❌ Invalid password for user:", email);
       return next(new ErrorHandler("Invalid email or password", 401));
     }
 
     // Send token and user data
     sendToken(user, 200, res);
-    console.log("✅ Login successful for user:", email);
   } catch (error) {
-    console.error("💥 Login error:", error);
     return next(new ErrorHandler("Login failed. Please try again.", 500));
   }
 });
@@ -322,11 +278,7 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
    GET USER (ME)
 ======================================================== */
 export const getUser = catchAsyncErrors(async (req, res, next) => {
-  console.log("GET USER endpoint called");
-  console.log("User in request:", req.user);
-  
   if (!req.user) {
-    console.log("No user found in request");
     return res.status(401).json({
       success: false,
       message: "User not authenticated"
@@ -522,20 +474,16 @@ export const resendOTP = catchAsyncErrors(async (req, res, next) => {
 
     // Send verification code via email
     try {
-      console.log("📧 Resending verification email to:", user.email);
       await sendVerificationCode(verificationCode, user.email);
-      console.log("✅ Verification email resent successfully");
-      
       res.status(200).json({
         success: true,
         message: "Verification code resent successfully. Please check your email.",
       });
     } catch (error) {
-      console.error("❌ Failed to resend verification email:", error);
       res.status(200).json({
         success: true,
         message: "Verification code generated. Please contact support if you don't receive the email.",
-        verificationCode: verificationCode, // Fallback for development
+        verificationCode: process.env.NODE_ENV === "development" ? verificationCode : undefined
       });
     }
   } catch (error) {

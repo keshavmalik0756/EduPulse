@@ -113,8 +113,8 @@ export const getReviewsByCourse = async (req, res) => {
           r.rating >= 4
             ? "positive"
             : r.rating >= 3
-            ? "neutral"
-            : "negative",
+              ? "neutral"
+              : "negative",
       })),
     });
   } catch (error) {
@@ -321,16 +321,16 @@ export const getCourseRatingSummary = async (req, res) => {
       percentage:
         totalReviews > 0
           ? Math.round(
-              ((stats.find((s) => s._id === r)?.count || 0) / totalReviews) * 100
-            )
+            ((stats.find((s) => s._id === r)?.count || 0) / totalReviews) * 100
+          )
           : 0,
     }));
 
     const avgRating =
       totalReviews > 0
         ? (
-            stats.reduce((sum, s) => sum + s._id * s.count, 0) / totalReviews
-          ).toFixed(1)
+          stats.reduce((sum, s) => sum + s._id * s.count, 0) / totalReviews
+        ).toFixed(1)
         : 0;
 
     res.status(200).json({

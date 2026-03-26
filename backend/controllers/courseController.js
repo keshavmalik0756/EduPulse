@@ -1,6 +1,8 @@
 import Course from "../models/courseModel.js";
 import Section from "../models/sectionModel.js";
 import Review from "../models/reviewModel.js";
+import Lecture from "../models/lectureModel.js";
+import Note from "../models/noteModel.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../services/cloudinary.js";
 // Removed logActivity import
 import mongoose from "mongoose";
@@ -356,11 +358,36 @@ export const getCreatorCourses = async (req, res) => {
       });
     }
 
+    // 📊 Fetch accurate Note counts for these courses
+    const noteCountsRecord = await Note.aggregate([
+      { 
+        $match: { 
+          course: { $in: courseDocs.map(doc => doc._id) },
+          isDeleted: false 
+        } 
+      },
+      { 
+        $group: { 
+          _id: "$course", 
+          count: { $sum: 1 } 
+        } 
+      }
+    ]);
+
+    // Create a map for quick lookup
+    const noteCountsMap = noteCountsRecord.reduce((map, item) => {
+      map[item._id.toString()] = item.count;
+      return map;
+    }, {});
+
     // Convert to objects with virtuals
     const courses = courseDocs.map(doc => {
       if (!doc) return null;
       try {
-        return doc.toObject({ virtuals: true });
+        const courseObj = doc.toObject({ virtuals: true });
+        // Override notesCount with the real aggregate count
+        courseObj.notesCount = noteCountsMap[doc._id.toString()] || 0;
+        return courseObj;
       } catch (err) {
         console.error("Error converting document to object:", err);
         return null;
@@ -949,13 +976,30 @@ export const getCourseAnalytics = async (req, res) => {
       });
     }
     
-    // Calculate analytics data
+    // Calculate real analytics data from student progress
+    const Lecture = mongoose.model("Lecture");
+    const progressStats = await Lecture.aggregate([
+      { $match: { courseId: course._id } },
+      { $unwind: "$progress" },
+      {
+        $group: {
+          _id: null,
+          totalSeconds: { $sum: "$progress.watchedDuration" },
+        }
+      }
+    ]);
+
+    const totalWatchTimeMinutes = Math.round((progressStats[0]?.totalSeconds || 0) / 60);
+    const avgTimePerStudent = course.totalEnrolled > 0 
+      ? Math.round(totalWatchTimeMinutes / course.totalEnrolled) 
+      : 0;
+
     const analytics = {
       completionRate: course.completionRate || 0,
       totalEnrolled: course.totalEnrolled || 0,
       totalDurationMinutes: course.totalDurationMinutes || 0,
-      totalWatchTime: (course.totalDurationMinutes || 0) * (course.totalEnrolled || 0),
-      avgTimePerStudent: course.totalDurationMinutes || 0,
+      totalWatchTime: totalWatchTimeMinutes,
+      avgTimePerStudent: avgTimePerStudent,
       views: course.views || 0,
       averageRating: course.averageRating || 0,
       revenue: course.revenue || 0,
@@ -995,16 +1039,38 @@ export const getEnrolledStudents = async (req, res) => {
       });
     }
     
-    // Transform the enrolled students data to match frontend expectations
-    const transformedStudents = (course.enrolledStudents || []).map(student => ({
-      _id: student._id,
-      name: student.name || 'Unknown',
-      email: student.email || 'No email provided',
-      // For now, we'll provide default values for progress and enrolledDate
-      // In a real implementation, these would come from actual student progress data
-      progress: Math.floor(Math.random() * 100), // Random progress for demo
-      enrolledDate: student.createdAt || new Date()
-    }));
+    // Fetch all lectures for this course to get total duration and student progress
+    const courseLectures = await Lecture.find({ courseId: courseId })
+      .select('duration progress');
+    
+    const totalCourseDuration = courseLectures.reduce((sum, lec) => sum + (lec.duration || 0), 0);
+
+    // Transform the enrolled students data with REAL progress calculation
+    const transformedStudents = (course.enrolledStudents || []).map(student => {
+      const studentIdStr = student._id.toString();
+      let totalWatched = 0;
+
+      courseLectures.forEach(lecture => {
+        // Find progress record for this specific student in this lecture
+        const p = lecture.progress?.find(p => p.userId && p.userId.toString() === studentIdStr);
+        if (p) {
+          totalWatched += p.watchedDuration || 0;
+        }
+      });
+
+      // Calculate percentage based on duration
+      const progressPercent = totalCourseDuration > 0 
+        ? Math.min(Math.round((totalWatched / totalCourseDuration) * 100), 100) 
+        : 0;
+
+      return {
+        _id: student._id,
+        name: student.name || 'Unknown',
+        email: student.email || 'No email provided',
+        progress: progressPercent,
+        enrolledDate: student.createdAt || new Date()
+      };
+    });
 
     // Return the enrolled students
     res.status(200).json({

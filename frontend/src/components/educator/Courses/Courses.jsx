@@ -1,111 +1,38 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import {
-  BookOpen, Plus, Edit, Trash2, Eye, Users, Calendar, TrendingUp,
-  Grid, List, Search, Filter, BarChart3, Target, Clock,
-  CheckCircle, AlertCircle, Star, Award, GraduationCap,
-  ChevronDown, X, SlidersHorizontal, Download, Upload,
-  RefreshCw, FileText, Video, BookA, CreditCard, UserCheck,
-  MoreHorizontal, Play, Pause, Archive, Copy, Share2,
-  ExternalLink, BookMarked, MessageSquare, BarChart,
-  Zap, AwardIcon, Globe, Lock, Unlock, Settings
+  BookOpen, Plus, Trash2, Users, TrendingUp,
+  Grid, List, Search, BarChart3, Clock,
+  CheckCircle, SlidersHorizontal, RefreshCw, 
+  CreditCard, UserCheck, BarChart, 
+  Globe
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import courseService from '../../../services/courseService.js';
-import noteService from '../../../services/noteService.js'; // Add this import
 import CreateCourses from './CreateCourses';
 import EditCourse from './EditCourse';
-import ViewCourse from './ViewCourse';
+import ViewCourse from './ViewCourse/ViewCourse';
 import Lectures from '../Lectures/Lectures.jsx';
-import CreateSection from '../Sections/CreateSection'; // Add this import
-import EditSection from '../Sections/EditSection'; // Add this import
+import CreateSection from '../Sections/CreateSection';
+import EditSection from '../Sections/EditSection';
 
-// Helper function to transform courses data
-const transformCourses = (coursesData = []) => {
-  // Ensure coursesData is an array
-  if (!Array.isArray(coursesData)) {
-    // Try to extract courses from the object if it's not an array
-    if (coursesData && typeof coursesData === 'object' && coursesData.courses && Array.isArray(coursesData.courses)) {
-      coursesData = coursesData.courses;
-    } else if (coursesData && typeof coursesData === 'object' && coursesData.data && Array.isArray(coursesData.data)) {
-      coursesData = coursesData.data;
-    } else {
-      console.warn('Unexpected courses data format:', coursesData);
-      return [];
-    }
-  }
-  
-  return coursesData.map(course => {
-    // Ensure course is an object
-    if (!course || typeof course !== 'object') {
-      console.warn('Invalid course data:', course);
-      return {};
-    }
-    
-    return {
-      id: course._id || course.id || '',
-      title: course.title || 'Untitled Course',
-      subTitle: course.subTitle || '',
-      description: course.description || '',
-      students: course.totalEnrolled || 0,
-      status: course.isPublished ? 'published' : 'draft',
-      lastUpdated: course.updatedAt ? new Date(course.updatedAt).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }) : 'Unknown',
-      lastUpdatedRaw: course.updatedAt || new Date().toISOString(),
-      thumbnail: course.thumbnail || '',
-      banner: course.banner || '',
-      previewVideo: course.previewVideo || '',
-      price: course.price || 0,
-      finalPrice: course.finalPrice !== undefined ? course.finalPrice : (course.price || 0),
-      originalPrice: course.originalPrice || course.price || 0,
-      discount: course.discount || 0,
-      discountPercentage: course.discountPercentage || course.discount || 0,
-      savings: course.savings || (course.discount > 0 ? (course.price || 0) - (course.finalPrice || 0) : 0),
-      rating: course.averageRating || 0,
-      reviewsCount: course.reviewsCount || 0,
-      category: course.category || 'Uncategorized',
-      subCategory: course.subCategory || '',
-      tags: Array.isArray(course.tags) ? course.tags : [],
-      duration: course.durationWithUnit ?? course.durationFormatted ?? `${course.totalDurationMinutes || 0} minutes`,
-      totalDurationMinutes: course.totalDurationMinutes || 0,
-      level: course.level || 'beginner',
-      views: course.views || 0,
-      completionRate: course.completionRate || 0,
-      revenue: course.revenue || 0,
-      modules: course.totalSections || (Array.isArray(course.sections) ? course.sections.length : 0) || 0,
-      lessons: course.totalLectures || (Array.isArray(course.lectures) ? course.lectures.length : 0) || 0,
-      lectures: course.totalLectures || (Array.isArray(course.lectures) ? course.lectures.length : 0) || 0,
-      sections: Array.isArray(course.sections) ? course.sections : [],
-      quizzes: 0,
-      assignments: 0,
-      certificate: course.hasCertificate || false,
-      hasCertificate: course.hasCertificate || false,
-      publishedDate: course.publishedDate ? new Date(course.publishedDate).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }) : null,
-      createdAt: course.createdAt || new Date().toISOString(),
-      updatedAt: course.updatedAt || new Date().toISOString(),
-      instructor: (course.creator && course.creator.name) || 'Unknown Instructor',
-      creatorId: (course.creator && course.creator._id) || (course.creator || ''),
-      language: course.language || 'English',
-      isFeatured: course.isFeatured || false,
-      enrollmentStatus: course.enrollmentStatus || 'open',
-      prerequisites: Array.isArray(course.prerequisites) ? course.prerequisites : [],
-      learningOutcomes: Array.isArray(course.learningOutcomes) ? course.learningOutcomes : [],
-      requirements: Array.isArray(course.requirements) ? course.requirements : [],
-      slug: course.slug || '',
-      metaTitle: course.metaTitle || '',
-      metaDescription: course.metaDescription || '',
-      notesCount: course.notesCount || 0
-    };
-  });
-};
+// Modular Components
+import StatCard from './components/StatCard';
+import CourseCard from './components/CourseCard';
+import CourseTable from './components/CourseTable';
+import CoursesFilters from './components/CoursesFilters';
+import CoursesHeader from './components/CoursesHeader';
+import DeleteConfirmModal from './components/DeleteConfirmModal';
+
+// Utilities
+import { 
+  transformCourses, 
+  formatCurrency, 
+  formatPercentage, 
+  getFinalPrice,
+  formatDuration
+} from './utils/courseUtils';
 
 function Courses() {
   const navigate = useNavigate();
@@ -150,29 +77,8 @@ function Courses() {
       }
 
       // Transform courses data to match frontend expectations
-      // Ensure we have a valid array before transforming
       const coursesData = coursesResponse?.courses || [];
-      
-      // Enhance courses with notes count
-      const enhancedCoursesData = await Promise.all(coursesData.map(async (course) => {
-        // Fetch notes count for this course
-        let notesCount = 0;
-        try {
-          const notesResponse = await noteService.getNotesByCourse(course._id);
-          if (notesResponse.success) {
-            notesCount = notesResponse.count || notesResponse.notes?.length || 0;
-          }
-        } catch (error) {
-          console.warn(`Failed to fetch notes for course ${course._id}:`, error);
-        }
-        
-        return {
-          ...course,
-          notesCount: notesCount
-        };
-      }));
-      
-      const transformedCourses = transformCourses(enhancedCoursesData);
+      const transformedCourses = transformCourses(coursesData);
 
       setCourses(transformedCourses);
       
@@ -295,9 +201,6 @@ function Courses() {
     navigate(`/educator/courses/analytics/${courseId}`);
   };
 
-  const handleSettingsCourse = (courseId) => {
-    navigate(`/educator/courses/settings/${courseId}`);
-  };
 
   const handleTogglePublish = async (courseId) => {
     try {
@@ -336,20 +239,24 @@ function Courses() {
   };
 
   // Delete flow
-  const handleDeleteCourse = (courseId) => {
-    setCourseToDelete(courseId);
+  const handleDeleteClick = (courseId) => {
+    const course = courses.find(c => c.id === courseId);
+    setCourseToDelete(course);
     setShowDeleteConfirm(true);
   };
 
-  const handleConfirmDelete = async () => {
+  const confirmDelete = async () => {
     try {
-      const response = await courseService.deleteCourse(courseToDelete);
+      if (!courseToDelete) return;
+      
+      const response = await courseService.deleteCourse(courseToDelete.id);
       
       if (!response.success) {
         throw new Error(response.message || 'Failed to delete course');
       }
       
-      setCourses(courses.filter(course => course.id !== courseToDelete));
+      
+      setCourses(courses.filter(course => course.id !== courseToDelete.id));
       setShowDeleteConfirm(false);
       toast.success(`Course deleted successfully`);
 
@@ -459,95 +366,7 @@ function Courses() {
     return result;
   }, [courses, searchTerm, filter, sortBy]);
 
-  // Get status badge for a course
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'published':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle className="mr-1 h-3 w-3" />
-            Published
-          </span>
-        );
-      case 'draft':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="mr-1 h-3 w-3" />
-            Draft
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
 
-  // Get enrollment status badge
-  const getEnrollmentStatusBadge = (status) => {
-    switch (status) {
-      case 'open':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <Unlock className="mr-1 h-3 w-3" />
-            Open
-          </span>
-        );
-      case 'closed':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <Lock className="mr-1 h-3 w-3" />
-            Closed
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
-
-  // Get level badge
-  const getLevelBadge = (level) => {
-    // Normalize the level value to match the switch cases
-    const normalizedLevel = level ? level.charAt(0).toUpperCase() + level.slice(1).toLowerCase() : 'Beginner';
-    
-    switch (normalizedLevel) {
-      case 'Beginner':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            Beginner
-          </span>
-        );
-      case 'Intermediate':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-            Intermediate
-          </span>
-        );
-      case 'Advanced':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            Advanced
-          </span>
-        );
-      case 'All-levels':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-            All Levels
-          </span>
-        );
-      default:
-        // Show the actual level value if it doesn't match any case
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            {normalizedLevel}
-          </span>
-        );
-    }
-  };
-
-  // Get featured badge (removed functionality)
-  const getFeaturedBadge = (isFeatured) => {
-    // Removed featured badge functionality
-    return null;
-  };
 
   const handleRefresh = async () => {
     try {
@@ -617,47 +436,7 @@ function Courses() {
     setShowFilters(false);
   };
 
-  // Format currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
 
-  // Format date
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Not published';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  // Format percentage
-  const formatPercentage = (value) => {
-    return `${value}%`;
-  };
-
-  // Format duration
-  const formatDuration = (duration) => {
-    return duration;
-  };
-
-  // Get final price (with fallback calculation)
-  const getFinalPrice = (course) => {
-    if (course.finalPrice !== undefined) {
-      return course.finalPrice;
-    }
-    // Fallback calculation if finalPrice is not provided by backend
-    if (course.discountPercentage > 0 && course.price > 0) {
-      return Math.round(course.price - (course.price * course.discountPercentage) / 100);
-    }
-    return course.price || 0;
-  };
 
   if (loading) {
     return (
@@ -670,7 +449,7 @@ function Courses() {
   return (
     <Routes>
       <Route path="/" element={
-        <div className="p-6">
+        <div className="p-3 sm:p-4 md:p-6">
           {/* Custom scrollbar styles */}
           <style>{`
             .custom-scrollbar::-webkit-scrollbar {
@@ -715,216 +494,77 @@ function Courses() {
             )}
 
             {/* Enhanced Statistics Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
-              {/* Total Courses Card */}
-              <motion.div
-                className="bg-white p-4 rounded-lg shadow-md border-l-4 border-blue-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden min-h-[200px]"
-                whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500 rounded-full opacity-10 transform translate-x-10 -translate-y-10"></div>
-                <div className="flex items-center justify-between relative z-10">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Total Courses</h3>
-                    <p className="text-2xl font-bold text-gray-800 mt-1">{stats.total}</p>
-                    <div className="flex items-center mt-2 flex-wrap">
-                      <span className="text-xs text-gray-400">
-                        {stats.published} published, {stats.draft} drafts
-                      </span>
-                      <button
-                        onClick={handleRefresh}
-                        className="ml-2 text-blue-500 hover:text-blue-700 text-xs transition-transform hover:rotate-90"
-                        title="Refresh data"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-blue-100 p-3 shadow-inner">
-                    <BookOpen className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-100 relative z-10">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500">Updated</span>
-                    <span className="font-medium text-gray-700">
-                      {lastUpdated.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+              <StatCard
+                title="Total Courses"
+                value={stats.total}
+                icon={BookOpen}
+                color="blue"
+                subtitle={`${stats.published} published, ${stats.draft} drafts`}
+                onRefresh={handleRefresh}
+                lastUpdated={lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              />
+
+              <StatCard
+                title="Total Students"
+                value={stats.students.toLocaleString()}
+                icon={Users}
+                color="green"
+                subtitle={stats.lowEnrollment > 0 ? `${stats.lowEnrollment} low enrollment alert` : "Enrollment levels healthy"}
+                extra={stats.lowEnrollment > 0 ? (
+                  <span className="inline-flex items-center text-[10px] text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                    Action Needed
+                  </span>
+                ) : null}
+              />
+
+              <StatCard
+                title="Total Revenue"
+                value={formatCurrency(stats.revenue)}
+                icon={CreditCard}
+                color="orange"
+                subtitle={`Avg ${stats.published > 0 ? formatCurrency(Math.round(stats.revenue / stats.published)) : '₹0'} per course`}
+                extra={
+                  <span className="inline-flex items-center text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                    <TrendingUp className="w-2.5 h-2.5 mr-1" /> +12% growth
+                  </span>
+                }
+              />
+
+              <StatCard
+                title="Performance"
+                value={`${stats.avgRating}/5`}
+                icon={BarChart3}
+                color="purple"
+                subtitle={`${stats.completionRate}% avg. completion`}
+                extra={
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                      Views: {stats.totalViews.toLocaleString()}
                     </span>
                   </div>
-                </div>
-              </motion.div>
-
-              {/* Students Card */}
-              <motion.div
-                className="bg-white p-4 rounded-lg shadow-md border-l-4 border-green-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden min-h-[200px]"
-                whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="absolute top-0 right-0 w-20 h-20 bg-green-500 rounded-full opacity-10 transform translate-x-10 -translate-y-10"></div>
-                <div className="flex items-center justify-between relative z-10">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Total Students</h3>
-                    <p className="text-2xl font-bold text-gray-800 mt-1">{stats.students}</p>
-                    <div className="mt-2">
-                      {stats.lowEnrollment > 0 ? (
-                        <span className="inline-flex items-center text-xs text-orange-500 font-medium bg-orange-50 px-2 py-1 rounded-full">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full mr-1"></span>
-                          {stats.lowEnrollment} low enrollment
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center text-xs text-green-500 bg-green-50 px-2 py-1 rounded-full">
-                          <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                          Enrollment levels good
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-green-100 p-3 shadow-inner">
-                    <Users className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-100 relative z-10">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500">Avg. per Course</span>
-                    <span className="font-medium text-gray-700">
-                      {stats.published > 0 ? Math.round(stats.students / stats.published) : 0}
-                    </span>
-                  </div>
-                  {stats.topPerforming && (
-                    <div className="flex justify-between text-xs mt-1">
-                      <span className="text-gray-500">Top Course</span>
-                      <span
-                        className="font-medium text-gray-700 break-words max-w-[120px]"
-                        title={stats.topPerforming.title}
-                      >
-                        {stats.topPerforming.title}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Revenue Card */}
-              <motion.div
-                className="bg-white p-4 rounded-lg shadow-md border-l-4 border-yellow-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden min-h-[200px]"
-                whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500 rounded-full opacity-10 transform translate-x-10 -translate-y-10"></div>
-                <div className="flex items-center justify-between relative z-10">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Total Revenue</h3>
-                    <p className="text-2xl font-bold text-gray-800 mt-1">{formatCurrency(stats.revenue)}</p>
-                    <div className="mt-2">
-                      <span className="inline-flex items-center text-xs text-yellow-500 bg-yellow-50 px-2 py-1 rounded-full">
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                        +12% this month
-                      </span>
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-yellow-100 p-3 shadow-inner">
-                    <CreditCard className="w-6 h-6 text-yellow-600" />
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-100 relative z-10">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500">Avg. per Course</span>
-                    <span className="font-medium text-gray-700">
-                      {stats.published > 0 ? formatCurrency(Math.round(stats.revenue / stats.published)) : formatCurrency(0)}
-                    </span>
-                  </div>
-                  {stats.topPerforming && (
-                    <div className="flex justify-between text-xs mt-1">
-                      <span className="text-gray-500">Top Earner</span>
-                      <span
-                        className="font-medium text-gray-700 break-words max-w-[120px]"
-                        title={stats.topPerforming.title}
-                      >
-                        {formatCurrency(stats.topPerforming.revenue)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Performance Card */}
-              <motion.div
-                className="bg-white p-4 rounded-lg shadow-md border-l-4 border-purple-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden min-h-[200px]"
-                whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500 rounded-full opacity-10 transform translate-x-10 -translate-y-10"></div>
-                <div className="flex items-center justify-between relative z-10">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Performance</h3>
-                    <p className="text-2xl font-bold text-gray-800 mt-1">{stats.avgRating}/5</p>
-                    <div className="mt-2">
-                      <span className="inline-flex items-center text-xs text-purple-500 bg-purple-50 px-2 py-1 rounded-full">
-                        <UserCheck className="w-3 h-3 mr-1" />
-                        {stats.completionRate}% completion
-                      </span>
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-purple-100 p-3 shadow-inner">
-                    <BarChart3 className="w-6 h-6 text-purple-600" />
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-100 relative z-10">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-500">Total Views</span>
-                    <span className="font-medium text-gray-700">{stats.totalViews.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs mt-1">
-                    <span className="text-gray-500">Avg. Rating</span>
-                    <span className="font-medium text-gray-700">{stats.avgRating}</span>
-                  </div>
-                  {stats.topPerforming && (
-                    <div className="flex justify-between text-xs mt-1">
-                      <span className="text-gray-500">Top Rated</span>
-                      <span
-                        className="font-medium text-gray-700 break-words max-w-[120px]"
-                        title={stats.topPerforming.title}
-                      >
-                        {stats.topPerforming.rating}/5
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
+                }
+              />
             </div>
 
             {/* Sub Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">My Courses</h1>
-                <p className="text-gray-600 mt-1">Manage your courses and track student progress</p>
-              </div>
-              <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
-                <button
-                  onClick={handleCreateCourse}
-                  className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>Create New Course</span>
-                </button>
-              </div>
-            </div>
+            <CoursesHeader 
+              onCreateCourse={handleCreateCourse} 
+            />
 
             {/* Bulk Actions */}
             {selectedCourses.size > 0 && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-md flex items-center justify-between">
-                <span className="text-blue-700">
+              <div className="mb-4 p-3 bg-blue-50 rounded-md flex items-center justify-between shadow-sm border border-blue-100">
+                <span className="text-blue-700 font-medium flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
                   {selectedCourses.size} course{selectedCourses.size !== 1 ? "s" : ""} selected
                 </span>
                 <div className="flex space-x-2">
                   <button
                     onClick={handleBulkDelete}
-                    className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 flex items-center"
+                    className="px-4 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center transition-all shadow-sm active:scale-95"
                   >
-                    <Trash2 className="w-4 h-4 mr-1" />
+                    <Trash2 className="w-4 h-4 mr-2" />
                     Delete Selected
                   </button>
                 </div>
@@ -932,491 +572,99 @@ function Courses() {
             )}
 
             {/* Filters and Search */}
-            <motion.div
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                {/* Search Bar */}
-                <div className="relative flex-1 max-w-md">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search courses..."
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-
-                {/* View Mode Toggle */}
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-md ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-500'}`}
-                    title="Grid View"
-                  >
-                    <Grid className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-md ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-500'}`}
-                    title="List View"
-                  >
-                    <List className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Filter Button */}
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-blue-50"
-                >
-                  <SlidersHorizontal className="w-4 h-4" />
-                  <span>Filters</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-                </button>
-              </div>
-
-              {/* Advanced Filters */}
-              <AnimatePresence>
-                {showFilters && (
-                  <motion.div
-                    className="mt-4 pt-4 border-t border-gray-200"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <select
-                          value={filter}
-                          onChange={(e) => setFilter(e.target.value)}
-                          className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                        >
-                          <option value="all">All Courses</option>
-                          <option value="published">Published</option>
-                          <option value="draft">Draft</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
-                        <select
-                          value={sortBy}
-                          onChange={(e) => setSortBy(e.target.value)}
-                          className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                        >
-                          <option value="newest">Newest First</option>
-                          <option value="oldest">Oldest First</option>
-                          <option value="popularity">Popularity</option>
-                          <option value="revenue">Revenue</option>
-                          <option value="alphabetical">Alphabetical</option>
-                        </select>
-                      </div>
-
-                      <div className="flex items-end">
-                        <button
-                          onClick={clearAllFilters}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50"
-                        >
-                          Reset Filters
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+            <CoursesFilters
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              showFilters={showFilters}
+              setShowFilters={setShowFilters}
+              filter={filter}
+              setFilter={setFilter}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              clearAllFilters={clearAllFilters}
+            />
 
             {/* Courses List */}
             {filteredCourses.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-8 h-8 text-blue-600" />
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                  <BookOpen className="w-10 h-10 text-blue-500" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No courses found</h3>
-                <p className="text-gray-500 mb-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No courses found</h3>
+                <p className="text-gray-500 mb-8 max-w-sm mx-auto">
                   {searchTerm || filter !== 'all'
-                    ? 'Try adjusting your filters or search term'
-                    : 'Get started by creating your first course'}
+                    ? 'We couldn\'t find any courses matching your current filters. Try adjusting them.'
+                    : 'Your dashboard is empty. Start your journey by creating your first premium course.'}
                 </p>
                 <button
                   onClick={handleCreateCourse}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-semibold transition-all shadow-md active:scale-95"
                 >
                   Create Your First Course
                 </button>
               </div>
             ) : (
-              <>
+              <AnimatePresence mode="wait">
                 {viewMode === 'grid' ? (
-                  // Grid View
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredCourses.map((course, index) => (
-                      <motion.div
-                        key={course.id}
-                        className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
-                        whileHover={{ y: -5 }}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
-                      >
-                        <div className="p-6">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              {course.thumbnail ? (
-                                <img
-                                  src={course.thumbnail}
-                                  alt={course.title}
-                                  className="w-full h-40 object-cover rounded-md mb-3"
-                                />
-                              ) : (
-                                <div className="w-full h-40 bg-blue-100 rounded-md mb-3 flex items-center justify-center">
-                                  <BookOpen className="h-12 w-12 text-blue-600" />
-                                </div>
-                              )}
-                              <h3 className="font-semibold text-gray-900 line-clamp-2">{course.title}</h3>
-                              <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
-                            </div>
-                            <div className="flex flex-col items-end space-y-1">
-                              {getStatusBadge(course.status)}
-                              {/* Removed featured badge */}
-                            </div>
-                          </div>
-
-                          {/* Added instructor name below the title and description */}
-                          <div className="text-xs text-gray-500 mb-3">
-                            by {course.instructor}
-                          </div>
-
-                          {/* Rest of the grid item content remains the same */}
-                          <div className="flex items-center text-sm text-gray-500 mb-2">
-                            <Users className="w-4 h-4 mr-1" />
-                            <span>{course.students} students</span>
-                            <span className="mx-2">•</span>
-                            <span className="font-medium text-gray-900">{formatCurrency(getFinalPrice(course))}</span>
-                          </div>
-
-                          <div className="flex items-center text-sm text-gray-500 mb-4">
-                            <Clock className="w-4 h-4 mr-1" />
-                            <span>{formatDuration(course.duration)}</span>
-                            <span className="mx-2">•</span>
-                            {getLevelBadge(course.level)}
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {course.category}
-                            </span>
-                            {getEnrollmentStatusBadge(course.enrollmentStatus)}
-                          </div>
-
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center">
-                              {course.rating > 0 ? (
-                                <>
-                                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                  <span className="ml-1 text-sm font-medium text-gray-900">{course.rating}</span>
-                                </>
-                              ) : (
-                                <span className="text-sm text-gray-500">No ratings</span>
-                              )}
-                              <span className="text-xs text-gray-500 ml-2">Updated {course.lastUpdated}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                            <div className="flex items-center">
-                              <BookA className="w-4 h-4 mr-1" />
-                              <span>{course.modules} modules</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Video className="w-4 h-4 mr-1" />
-                              <span>{course.lessons} lessons</span>
-                            </div>
-                            <div className="flex items-center">
-                              <FileText className="w-4 h-4 mr-1" />
-                              <span>{course.quizzes} quizzes</span>
-                            </div>
-                          </div>
-                          
-                          {/* Notes count */}
-                          <div className="flex items-center text-sm text-gray-500 mb-4">
-                            <BookOpen className="w-4 h-4 mr-1" />
-                            <span>{course.notesCount} notes</span>
-                          </div>
-
-                          <div className="flex items-center justify-between text-sm text-gray-500">
-                            <div className="flex items-center">
-                              <Globe className="w-4 h-4 mr-1" />
-                              <span>{course.language}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <UserCheck className="w-4 h-4 mr-1" />
-                              <span>{formatPercentage(course.completionRate)}</span>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-5 gap-1">
-                            <button
-                              onClick={() => handleViewCourse(course)}
-                              className="flex flex-col items-center justify-center p-2 bg-white rounded-md hover:bg-blue-50 transition-colors"
-                              title="View Course"
-                            >
-                              <Eye className="w-4 h-4 text-gray-600" />
-                              <span className="text-xs text-gray-700 mt-1">View</span>
-                            </button>
-                            <button
-                              onClick={() => handleViewAnalytics(course.id)}
-                              className="flex flex-col items-center justify-center p-2 bg-white rounded-md hover:bg-blue-50 transition-colors"
-                              title="View Analytics"
-                            >
-                              <BarChart className="w-4 h-4 text-gray-600" />
-                              <span className="text-xs text-gray-700 mt-1">Analytics</span>
-                            </button>
-                            <button
-                              onClick={() => handleEditCourse(course.id)}
-                              className="flex flex-col items-center justify-center p-2 bg-white rounded-md hover:bg-blue-50 transition-colors"
-                              title="Edit Course"
-                            >
-                              <Edit className="w-4 h-4 text-gray-600" />
-                              <span className="text-xs text-gray-700 mt-1">Edit</span>
-                            </button>
-                            <button
-                              onClick={() => handleTogglePublish(course.id)}
-                              className={`flex flex-col items-center justify-center p-2 rounded-md transition-colors ${course.status === 'published'
-                                  ? 'bg-green-50 hover:bg-green-100'
-                                  : 'bg-yellow-50 hover:bg-yellow-100'
-                                }`}
-                              title={course.status === 'published' ? 'Unpublish Course' : 'Publish Course'}
-                            >
-                              {course.status === 'published' ? (
-                                <CheckCircle className="w-4 h-4 text-green-600" />
-                              ) : (
-                                <Clock className="w-4 h-4 text-yellow-600" />
-                              )}
-                              <span className={`text-xs mt-1 ${course.status === 'published' ? 'text-green-700' : 'text-yellow-700'
-                                }`}>
-                                {course.status === 'published' ? 'Live' : 'Draft'}
-                              </span>
-                            </button>
-                            <button
-                              onClick={() => handleSettingsCourse(course.id)}
-                              className="flex flex-col items-center justify-center p-2 bg-white rounded-md hover:bg-blue-50 transition-colors"
-                              title="Course Settings"
-                            >
-                              <Settings className="w-4 h-4 text-gray-600" />
-                              <span className="text-xs text-gray-700 mt-1">Settings</span>
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  // Enhanced List View (Table)
-                  <motion.div
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
+                  <motion.div 
+                    key="grid"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
                   >
-                    <div className="overflow-x-auto custom-scrollbar">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-white">
-                          <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
-                              <input
-                                type="checkbox"
-                                checked={selectedCourses.size === filteredCourses.length && filteredCourses.length > 0}
-                                onChange={handleSelectAll}
-                                className="rounded text-blue-500 focus:ring-blue-400"
-                              />
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Students</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Content</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-100">
-                          {filteredCourses.map((course, index) => (
-                            <motion.tr
-                              key={course.id}
-                              className="hover:bg-blue-50"
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedCourses.has(course.id)}
-                                  onChange={() => handleSelectCourse(course.id)}
-                                  className="rounded text-blue-500 focus:ring-blue-400"
-                                />
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="flex items-center">
-                                  {course.thumbnail ? (
-                                    <img
-                                      src={course.thumbnail}
-                                      alt={course.title}
-                                      className="flex-shrink-0 h-16 w-24 object-cover rounded-md"
-                                    />
-                                  ) : (
-                                    <div className="flex-shrink-0 h-16 w-24 bg-blue-100 rounded-md flex items-center justify-center">
-                                      <BookOpen className="h-8 w-8 text-blue-600" />
-                                    </div>
-                                  )}
-                                  <div className="ml-4">
-                                    <div className="text-sm font-medium text-gray-900">
-                                      {course.title}
-                                    </div>
-                                    <div className="text-sm text-gray-500 line-clamp-1">{course.description}</div>
-                                    <div className="text-xs text-gray-400 mt-1">
-                                      by {course.instructor} • {course.language}
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{course.category}</div>
-                                <div className="flex items-center space-x-1 mt-1">
-                                  {getLevelBadge(course.level)}
-                                  {getEnrollmentStatusBadge(course.enrollmentStatus)}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <div className="flex items-center">
-                                  <Users className="w-4 h-4 mr-1" />
-                                  {course.students}
-                                </div>
-                                <div className="text-xs text-gray-400 mt-1 flex items-center">
-                                  <UserCheck className="w-3 h-3 mr-1" />
-                                  {formatPercentage(course.completionRate)} completion
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <div className="flex flex-col">
-                                  {course.discountPercentage > 0 ? (
-                                    <>
-                                      <span className="font-semibold text-green-600">{formatCurrency(course.finalPrice)}</span>
-                                      <div className="flex items-center space-x-2">
-                                        <span className="text-xs text-gray-400 line-through">{formatCurrency(course.originalPrice)}</span>
-                                        <span className="text-xs bg-red-100 text-red-800 px-1 py-0.5 rounded">
-                                          {course.discountPercentage}% OFF
-                                        </span>
-                                      </div>
-                                      <span className="text-xs text-green-600 mt-1">
-                                        Save {formatCurrency(course.savings)}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span>{formatCurrency(course.finalPrice || course.price)}</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center space-y-1 flex-col">
-                                  {getStatusBadge(course.status)}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {course.rating > 0 ? (
-                                  <div className="flex items-center">
-                                    <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                                    <span>{course.rating}</span>
-                                    <span className="text-gray-400 mx-1">•</span>
-                                    <span>{course.views} views</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400">No ratings</span>
-                                )}
-                                <div className="text-xs text-gray-400 mt-1">
-                                  Updated: {course.lastUpdated}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <div className="flex items-center space-x-2">
-                                  <div className="flex items-center text-xs">
-                                    <BookA className="w-3 h-3 mr-1" />
-                                    {course.modules}
-                                  </div>
-                                  <div className="flex items-center text-xs">
-                                    <Video className="w-3 h-3 mr-1" />
-                                    {course.lessons}
-                                  </div>
-                                  <div className="flex items-center text-xs">
-                                    <FileText className="w-3 h-3 mr-1" />
-                                    {course.quizzes}
-                                  </div>
-                                </div>
-                                <div className="text-xs text-gray-400 mt-1">
-                                  {formatDuration(course.duration)}
-                                </div>
-                                <div className="text-xs text-gray-400 mt-1">
-                                  {course.assignments} assignments
-                                </div>
-                                
-                                {/* Notes count in list view */}
-                                <div className="flex items-center text-xs text-gray-400 mt-1">
-                                  <BookOpen className="w-3 h-3 mr-1" />
-                                  <span>{course.notesCount} notes</span>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div className="flex space-x-1">
-                                  <button
-                                    onClick={() => handleViewCourse(course)}
-                                    className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md"
-                                    title="View Course"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleViewAnalytics(course.id)}
-                                    className="p-2 text-purple-600 hover:text-purple-900 hover:bg-purple-50 rounded-md"
-                                    title="View Analytics"
-                                  >
-                                    <BarChart className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleEditCourse(course.id)}
-                                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-blue-50 rounded-md"
-                                    title="Edit Course"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleSettingsCourse(course.id)}
-                                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-blue-50 rounded-md"
-                                    title="Course Settings"
-                                  >
-                                    <Settings className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </motion.tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    {filteredCourses.map((course) => (
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        onView={handleViewCourse}
+                        onEdit={handleEditCourse}
+                        onDelete={handleDeleteClick}
+                        onTogglePublish={handleTogglePublish}
+                        onAnalytics={handleViewAnalytics}
+                        isSelected={selectedCourses.has(course.id)}
+                        onSelect={handleSelectCourse}
+                        formatCurrency={formatCurrency}
+                        getFinalPrice={getFinalPrice}
+                      />
+                    ))}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="table"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <CourseTable
+                      courses={filteredCourses}
+                      selectedCourses={selectedCourses}
+                      onSelectCourse={handleSelectCourse}
+                      onSelectAll={handleSelectAll}
+                      onView={handleViewCourse}
+                      onEdit={handleEditCourse}
+                      onAnalytics={handleViewAnalytics}
+                      formatCurrency={formatCurrency}
+                      formatPercentage={formatPercentage}
+                      getFinalPrice={getFinalPrice}
+                      formatDuration={formatDuration}
+                    />
                   </motion.div>
                 )}
-              </>
+              </AnimatePresence>
             )}
+
+            {/* Delete Confirmation Modal */}
+            <DeleteConfirmModal
+              isOpen={showDeleteConfirm}
+              onClose={() => setShowDeleteConfirm(false)}
+              onConfirm={confirmDelete}
+              courseTitle={courseToDelete?.title}
+              isBulk={Array.isArray(courseToDelete)}
+              count={Array.isArray(courseToDelete) ? courseToDelete.length : 1}
+            />
           </div>
         </div>
       } />
@@ -1424,8 +672,6 @@ function Courses() {
       <Route path="/create" element={<CreateCourses />} />
       <Route path="/edit/:id" element={<EditCourse />} />
       <Route path="/view/:courseId" element={<ViewCourse />} />
-      
-      {/* Section routes */}
       <Route path="/:courseId/sections/create" element={<CreateSection />} />
       <Route path="/:courseId/sections/edit/:sectionId" element={<EditSection />} />
       
