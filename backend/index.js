@@ -57,7 +57,6 @@ import leaderboardRouter from "./routes/leaderboardRouter.js";
 import lectureQualityRouter from "./routes/lectureQualityRouter.js";
 import progressRouter from "./routes/progressRouter.js";
 import paymentRouter from "./routes/paymentRouter.js";
-// Removed activityRouter import
 
 // ===========================
 // 🚀 App Initialization
@@ -78,6 +77,7 @@ app.disable("x-powered-by"); // Hide Express info for security
 // ===========================
 const allowedOrigins = [
   "https://edupulse-theta.vercel.app",
+  "https://edupulse-theta.vercel.app/",
   "https://edupulse-ko2w.onrender.com",
   ...(process.env.FRONTEND_URL?.split(",").map(url => url.trim().replace(/\/$/, "")) || []),
 ].filter(Boolean);
@@ -162,7 +162,7 @@ app.use(
       "Content-Type",
       "Authorization",
       "X-Request-ID",
-      "Cache-Control",  // Add this missing header
+      "Cache-Control",
       "X-Requested-With",
       "Accept",
       "Origin",
@@ -263,7 +263,6 @@ app.use("/api/leaderboard", leaderboardRouter);
 app.use("/api/quality", lectureQualityRouter);
 app.use("/api/progress", progressRouter);
 app.use("/api/payments", paymentRouter);
-// Removed activityRouter usage
 
 // ===========================
 // 🧪 Health & Test Routes
