@@ -2,7 +2,7 @@ export const sendToken = (user, statusCode, res) => {
   try {
     const token = user.generateToken();
     const refreshToken = user.generateRefreshToken();
-    
+
     // Validate that tokens were generated
     if (!token || !refreshToken) {
       throw new Error("Failed to generate authentication tokens");
