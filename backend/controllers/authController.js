@@ -338,7 +338,9 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
       return next(
         new ErrorHandler(
-          "Failed to send password reset email. Please try again later.",
+          process.env.NODE_ENV === "development" 
+            ? `Failed to send email: ${error.message}` 
+            : "Failed to send password reset email. Please try again later.",
           500
         )
       );
