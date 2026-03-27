@@ -12,9 +12,9 @@ import AuthButton from "../components/auth/AuthButton";
 import collaborationHero from "../assets/collaboration-hero.svg";
 
 const OTP = () => {
-    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+    const [otp, setOtp] = useState(["", "", "", "", ""]);
     const [timer, setTimer] = useState(60);
-    const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+    const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef()];
     
     const { email } = useParams();
     const navigate = useNavigate();
@@ -35,7 +35,7 @@ const OTP = () => {
         newOtp[index] = value.substring(value.length - 1);
         setOtp(newOtp);
 
-        if (value && index < 5) {
+        if (value && index < 4) {
             inputRefs[index + 1].current.focus();
         }
     };
@@ -49,8 +49,8 @@ const OTP = () => {
     const handleVerify = async (e) => {
         e.preventDefault();
         const otpString = otp.join("");
-        if (otpString.length < 6) {
-            toast.error("Please enter complete 6-digit code");
+        if (otpString.length < 5) {
+            toast.error("Please enter complete 5-digit code");
             return;
         }
 
@@ -79,7 +79,7 @@ const OTP = () => {
     return (
         <AuthLayout 
             title="Verify Email" 
-            subtitle={`We've sent a 6-digit code to ${email}`}
+            subtitle={`We've sent a 5-digit code to ${email}`}
             reverse={true}
             image={collaborationHero}
             imageAlt="OTP Verification Hero"

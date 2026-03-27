@@ -48,7 +48,7 @@ const sendEmail = async (options) => {
         }
       });
     });
-    
+
     return info;
   } catch (error) {
     console.error("Email sending failed:", error.message);

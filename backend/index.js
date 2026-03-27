@@ -97,7 +97,7 @@ app.options('*', cors({
     // Check if origin is allowed
     const isAllowed = allowedOrigins.some(
       (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
-    );
+    ) || (process.env.NODE_ENV !== "production" && normalizedOrigin.startsWith("http://localhost:"));
 
     if (isAllowed) {
       // Return the EXACT origin that was sent (not a different one)
@@ -144,7 +144,7 @@ app.use(
       // Check if origin is allowed
       const isAllowed = allowedOrigins.some(
         (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
-      );
+      ) || (process.env.NODE_ENV !== "production" && normalizedOrigin.startsWith("http://localhost:"));
 
       if (isAllowed) {
         // Return the EXACT origin that was sent (not a different one)
