@@ -1,74 +1,122 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 /**
  * ========================================
- * 🚀 EduPulse Advanced Email Service (Resend Integration)
+ * 🚀 EduPulse Advanced Email Service
  * ========================================
  */
 
-let resendInstance = null;
+// Create transporter ONCE (pooling enabled)
+const createTransporter = () => {
+  const port = parseInt(process.env.SMTP_PORT, 10);
 
-const getResendClient = () => {
-  if (!resendInstance) {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error("Missing ENV: RESEND_API_KEY. Please provide your Resend API token.");
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port,
+    secure: port === 465, // true for 465, false for 587
+    auth: {
+      user: process.env.SMTP_MAIL,
+      pass: process.env.SMTP_PASSWORD,
+    },
+
+    // 🔥 PERFORMANCE BOOST
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+
+    // 🔐 SECURITY
+    tls: {
+      rejectUnauthorized: false, // Bypasses Render/Gmail SNI certificate handshake mismatches
+    },
+
+    // ⏱️ TIMEOUTS
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+  });
+};
+
+// Singleton transporter
+const transporter = createTransporter();
+
+/**
+ * Retry Wrapper
+ */
+const sendWithRetry = async (mailOptions, retries = 3) => {
+  try {
+    return await transporter.sendMail(mailOptions);
+  } catch (error) {
+    if (retries > 0) {
+      console.warn(`⚠️ Email failed, retrying... (${retries})`);
+      return sendWithRetry(mailOptions, retries - 1);
     }
-    resendInstance = new Resend(process.env.RESEND_API_KEY);
+    throw error;
   }
-  return resendInstance;
 };
 
 /**
- * Main Email Transport Protocol using REST HTTPS
+ * Main Email Function
  */
 const sendEmail = async ({
   email,
   subject,
   html,
   text,
-  attachments,
+  attachments = [],
   cc,
   bcc,
 }) => {
   try {
-    const resend = getResendClient();
+    // ===========================
+    // 🔍 ENV VALIDATION
+    // ===========================
+    const requiredEnv = [
+      "SMTP_HOST",
+      "SMTP_PORT",
+      "SMTP_MAIL",
+      "SMTP_PASSWORD",
+    ];
 
-    // In a live production setting with a verified domain, change this in .env
-    const fromAddress = process.env.RESEND_FROM_EMAIL || "EduPulse <onboarding@resend.dev>";
-
-    // Build the request securely bypassing raw SMTP layers
-    const mailPayload = {
-      from: fromAddress,
-      to: [email],
-      subject,
-      html,
-    };
-
-    // Add optional routing variables safely
-    if (text) mailPayload.text = text;
-    if (cc) mailPayload.cc = cc;
-    if (bcc) mailPayload.bcc = bcc;
-    if (attachments && attachments.length > 0) mailPayload.attachments = attachments;
-
-    console.log(`📤 Dispatching email out to ${email} via HTTPS REST API...`);
-
-    // Submit cleanly via Resend's edge infrastructure
-    const response = await resend.emails.send(mailPayload);
-
-    // Resend catches REST validations and returns them inside "response.error" instead of crashing natively
-    if (response.error) {
-      console.error("❌ RESEND API REJECTED DISPATCH:", response.error);
-      throw new Error(response.error.message || "Resend API validation failed.");
+    for (const key of requiredEnv) {
+      if (!process.env[key]) {
+        throw new Error(`Missing ENV: ${key}`);
+      }
     }
 
-    console.log("✅ Email successfully delivered to Edge API:", response.data.id);
-    return response;
+    // ===========================
+    // 📧 MAIL OPTIONS
+    // ===========================
+    const mailOptions = {
+      from: `EduPulse <${process.env.SMTP_MAIL}>`,
+      to: email,
+      subject,
+      html,
+      text: text || "EduPulse Notification",
+      attachments,
+      cc,
+      bcc,
+    };
+
+    console.log("📤 Sending email to:", email);
+
+    const info = await sendWithRetry(mailOptions);
+
+    console.log("✅ Email sent:", {
+      messageId: info.messageId,
+      response: info.response,
+    });
+
+    return info;
 
   } catch (error) {
-    console.error("❌ HTTPS EMAIL TRANSPORT ERROR:");
-    console.error({ message: error.message, stack: error.stack });
-    
-    // Pass generalized string up the chain to the client safely
+    console.error("❌ EMAIL SERVICE ERROR");
+    console.error({
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      command: error.command,
+    });
+
     throw new Error(`Email failed: ${error.message}`);
   }
 };
