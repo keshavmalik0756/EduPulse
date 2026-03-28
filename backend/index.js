@@ -140,6 +140,14 @@ app.use((req, res, next) => {
 // ===========================
 // 🔗 ROUTES
 // ===========================
+
+// Welcome Route for root domains
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "🚀 EduPulse Enterprise API is running online and serving requests flawlessly.",
+  });
+});
 app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
 app.use("/api/courses", courseRouter);
