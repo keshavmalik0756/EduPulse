@@ -1,6 +1,6 @@
 // client/src/store/slices/userSlice.js
 import { createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import apiClient from "../utils/apiClient";
 import { toast } from "react-toastify";
 
 // Remove duplicate axios interceptor setup since it's already handled in apiClient.js
@@ -78,7 +78,7 @@ export const {
 export const fetchAllUsers = () => async (dispatch) => {
   dispatch(fetchAllUsersRequest());
   try {
-    const res = await axios.get(`/users/all`);
+    const res = await apiClient.get(`/users/all`);
     dispatch(fetchAllUsersSuccess(res.data.users));
   } catch (error) {
     // Handle cancelled requests silently
@@ -95,7 +95,7 @@ export const fetchAllUsers = () => async (dispatch) => {
 export const addNewAdmin = (adminData) => async (dispatch) => {
   dispatch(addNewAdminRequest());
   try {
-    const res = await axios.post(`/users/add/new-admin`, adminData, {
+    const res = await apiClient.post(`/users/add/new-admin`, adminData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     toast.success(res.data.message || "Admin added successfully");

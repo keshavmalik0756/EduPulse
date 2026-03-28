@@ -17,11 +17,11 @@
 
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
+import redisClient from "../config/redis.js";
 
 dotenv.config();
 
 let RedisStore;
-let redisClient;
 let useRedis = false;
 
 // ------------------------------------------------------------
@@ -29,24 +29,35 @@ let useRedis = false;
 // ------------------------------------------------------------
 if (process.env.REDIS_URL) {
   try {
-    const { createClient } = await import("redis");
     const { RedisStore: ExpressRedisStore } = await import("rate-limit-redis");
 
-    redisClient = createClient({ url: process.env.REDIS_URL });
-    redisClient.on("error", (err) =>
-      console.warn("⚠️ Redis RateLimiter Error:", err.message)
-    );
-
-    await redisClient.connect();
     RedisStore = ExpressRedisStore;
     useRedis = true;
 
-    console.log("✅ RateLimiter: Connected to Redis.");
+    console.log("✅ RateLimiter: Connected to global ioredis config.");
   } catch (err) {
-    console.warn("⚠️ RateLimiter: Redis not available, using in-memory store.");
+    console.warn("⚠️ RateLimiter: Redis logic fallback, using in-memory store.");
     useRedis = false;
   }
 }
+
+/**
+ * ============================================================
+ * 🛡️ OTP Custom Anti-Spam (Redis backed)
+ * ============================================================
+ */
+export const checkOtpLimit = async (email) => {
+  const key = `otp_limit:${email}`;
+  const attempts = await redisClient.incr(key);
+
+  if (attempts === 1) {
+    await redisClient.expire(key, 600); // 10 min
+  }
+
+  if (attempts > 5) {
+    throw new Error("Too many OTP requests. Try again later.");
+  }
+};
 
 /**
  * ============================================================
@@ -64,7 +75,7 @@ export default function rateLimiter(max = 100, windowMs = 15 * 60 * 1000, opts =
 
   return rateLimit({
     store: useRedis
-      ? new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) })
+      ? new RedisStore({ sendCommand: (...args) => redisClient.call(...args) })
       : undefined,
 
     windowMs,

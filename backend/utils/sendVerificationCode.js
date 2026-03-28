@@ -2,23 +2,85 @@ import sendEmail from "./sendEmail.js";
 import { generateVerificationOtpEmailTemplate } from "./emailTemplates.js";
 
 /**
- * Send verification code to user's email
- * @param {string|number} otp - The verification code/OTP
- * @param {string} email - The user's email address
+ * ========================================
+ * 🔐 EduPulse Advanced OTP Email Sender
+ * ========================================
  */
-export const sendVerificationCode = async (otp, email) => {
+
+/**
+ * Mask email for secure logging
+ */
+const maskEmail = (email) => {
+  const [name, domain] = email.split("@");
+  return `${name[0]}***@${domain}`;
+};
+
+/**
+ * Send verification OTP
+ * @param {Object} options
+ * @param {string|number} options.otp
+ * @param {string} options.email
+ * @param {Object} [options.req] - Express request (for IP & device)
+ */
+export const sendVerificationCode = async ({ otp, email, req = null }) => {
   try {
-    const message = generateVerificationOtpEmailTemplate(otp);
-    
-    await sendEmail({
+    // ===========================
+    // 🔍 VALIDATION
+    // ===========================
+    if (!otp || !email) {
+      throw new Error("OTP and email are required");
+    }
+
+    // ===========================
+    // 📡 METADATA (SECURITY)
+    // ===========================
+    const ip =
+      req?.headers["x-forwarded-for"] ||
+      req?.socket?.remoteAddress ||
+      "Unknown";
+
+    const device = req?.headers["user-agent"] || "Unknown Device";
+
+    // ===========================
+    // 📧 EMAIL TEMPLATE
+    // ===========================
+    const html = generateVerificationOtpEmailTemplate({
+      otp,
       email,
-      subject: "Verify your email address - EduPulse",
-      message,
+      ip,
+      device,
     });
-    
-    console.log(`✅ Verification code sent successfully to ${email}`);
+
+    // ===========================
+    // 📤 SEND EMAIL
+    // ===========================
+    const response = await sendEmail({
+      email,
+      subject: "🔐 Verify your EduPulse account",
+      html,
+      text: `Your OTP is ${otp}. Valid for 5 minutes.`,
+    });
+
+    // ===========================
+    // 📊 SUCCESS LOG
+    // ===========================
+    console.log("✅ OTP EMAIL SENT", {
+      to: maskEmail(email),
+      messageId: response?.messageId,
+      ip,
+    });
+
+    return {
+      success: true,
+      message: "Verification email sent successfully",
+    };
+
   } catch (error) {
-    console.error(`❌ Failed to send verification code to ${email}:`, error.message);
-    throw error;
+    console.error("❌ OTP EMAIL FAILED", {
+      email: maskEmail(email),
+      error: error.message,
+    });
+
+    throw new Error("Failed to send verification email");
   }
 };

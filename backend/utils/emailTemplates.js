@@ -1,174 +1,184 @@
-export function generateVerificationOtpEmailTemplate(otpCode) {
-  return `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; background-color: #f0f9ff; padding: 32px; border-radius: 16px; border: 1px solid #bae6fd;">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <h1 style="font-size: 28px; font-weight: 700; color: #0369a1; margin-bottom: 8px;">🔐 Email Verification</h1>
-          <p style="font-size: 16px; color: #0c4a6e;">Secure your EduPulse account by verifying your email address</p>
-        </div>
-  
-        <div style="margin-bottom: 24px;">
-          <p style="font-size: 16px; color: #083344;">Hi there,</p>
-          <p style="font-size: 16px; color: #083344; margin-top: 8px;">
-            To continue, please use the one-time password (OTP) below:
-          </p>
-        </div>
-  
-        <div style="text-align: center; margin: 24px 0;">
-          <span style="
-            display: inline-block;
-            font-size: 32px;
-            font-weight: 700;
-            color: #083344;
-            background-color: #bae6fd;
-            padding: 12px 32px;
-            border-radius: 12px;
-            letter-spacing: 4px;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-          ">
-            ${otpCode}
-          </span>
-        </div>
-  
-        <p style="font-size: 14px; color: #0c4a6e; text-align: center;">
-          This code is valid for <strong>5 minutes</strong>. Do not share it with anyone.
-        </p>
-  
-        <div style="margin-top: 32px; text-align: center; font-size: 14px; color: #0c4a6e;">
-          <p>If you didn't request this, you can safely ignore this email.</p>
-        </div>
-  
-        <hr style="margin: 32px 0; border-color: #bae6fd;" />
-  
-        <footer style="text-align: center; color: #0c4a6e; font-size: 14px;">
-          <p>Thank you,<br><strong>EduPulse Team</strong></p>
-          <p style="margin-top: 8px; font-size: 12px;">This is an automated email – please do not reply.</p>
-        </footer>
-      </div>
-    `;
-}
+/**
+ * ========================================
+ * 📧 EduPulse Email Templates (Advanced)
+ * ========================================
+ */
 
-export function generatePasswordResetEmailTemplate(resetPasswordUrl) {
+// ========================================
+// 🔐 VERIFICATION OTP EMAIL
+// ========================================
+export function generateVerificationOtpEmailTemplate({ otp, email, ip, device }) {
   return `
   <!DOCTYPE html>
-  <html lang="en">
+  <html>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Password Reset</title>
     <style>
       body {
         margin: 0;
         padding: 0;
-        background-color: #f0f9ff;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #f0f9ff;
+        font-family: 'Segoe UI', sans-serif;
       }
       .container {
         max-width: 600px;
         margin: 40px auto;
-        background-color: #ffffff;
-        padding: 32px;
+        background: #ffffff;
+        padding: 30px;
         border-radius: 16px;
         border: 1px solid #bae6fd;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
       }
       h1 {
-        font-size: 26px;
-        font-weight: 700;
         color: #0369a1;
-        margin: 8px 0;
+        text-align: center;
       }
       p {
-        font-size: 15px;
         color: #083344;
-        margin: 8px 0;
-      }
-      .btn {
-        display: inline-block;
-        padding: 12px 32px;
-        background-color: #0ea5e9;
-        color: white;
         font-size: 15px;
-        font-weight: 600;
-        text-decoration: none;
+      }
+      .otp-box {
+        text-align: center;
+        margin: 25px 0;
+      }
+      .otp {
+        font-size: 34px;
+        font-weight: bold;
+        background: #bae6fd;
+        padding: 14px 30px;
         border-radius: 12px;
-        letter-spacing: 1px;
-        box-shadow: 0 4px 14px rgba(14, 165, 233, 0.2);
-        transition: opacity 0.3s ease;
+        letter-spacing: 5px;
+        display: inline-block;
       }
-      .btn:hover {
-        opacity: 0.9;
-      }
-      .logo {
-        width: 60px;
-        margin-bottom: 12px;
-      }
-      .hero-img {
-        width: 140px;
-        border-radius: 12px;
-        margin: 20px auto;
+      .info {
+        font-size: 13px;
+        color: #0369a1;
+        margin-top: 20px;
       }
       .footer {
+        margin-top: 30px;
+        text-align: center;
         font-size: 13px;
         color: #0c4a6e;
-        text-align: center;
-        margin-top: 32px;
-      }
-      .small-text {
-        font-size: 13px;
-        color: #0c4a6e;
-        text-align: center;
       }
       @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #0c4a6e;
-        }
-        .container {
-          background-color: #083344;
-          color: #bae6fd;
-          border-color: #0369a1;
-        }
-        p, h1 {
-          color: #bae6fd;
-        }
-        .btn {
-          background-color: #0ea5e9;
-        }
+        body { background: #0c4a6e; }
+        .container { background: #083344; color: #bae6fd; }
+        p, h1 { color: #bae6fd; }
       }
     </style>
   </head>
+
   <body>
     <div class="container">
-      <div style="text-align: center;">
-        <img src="https://cdn-icons-png.flaticon.com/512/3176/3176364.png" alt="EduPulse Icon" class="logo" />
-        <h1>🔁 Reset Your Password</h1>
-        <p style="color: #0c4a6e;">We received a request to reset your EduPulse password.</p>
+      <h1>🔐 Verify Your Email</h1>
+
+      <p>Hello,</p>
+      <p>Use the OTP below to verify your EduPulse account:</p>
+
+      <div class="otp-box">
+        <div class="otp">${otp}</div>
       </div>
 
-      <div style="text-align: center;">
-        <img src="https://cdn-icons-png.flaticon.com/512/7339/7339472.png" alt="Reset Illustration" class="hero-img" />
-      </div>
+      <p>This OTP is valid for <strong>5 minutes</strong>. Do not share it.</p>
 
-      <div style="text-align: center;">
-        <p>Hi there,</p>
-        <p>Click the button below to securely reset your password. This link is valid for <strong>5 minutes</strong>.</p>
-        <a href="${resetPasswordUrl}" target="_blank" class="btn">Reset Password</a>
+      <div class="info">
+        <p><strong>Requested Email:</strong> ${email}</p>
+        <p><strong>IP Address:</strong> ${ip || "Unknown"}</p>
+        <p><strong>Device:</strong> ${device || "Unknown Device"}</p>
       </div>
-
-      <div class="small-text" style="margin-top: 24px;">
-        <p>If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="font-size: 12px; color: #0369a1; word-break: break-word;">${resetPasswordUrl}</p>
-      </div>
-
-      <div class="small-text" style="margin-top: 24px;">
-        <p>If you didn't request this, just ignore this email.</p>
-        <p>We care about your account security. 🔐</p>
-      </div>
-
-      <hr style="margin: 32px 0; border: none; border-top: 1px solid #bae6fd;" />
 
       <div class="footer">
-        <p>Thanks,<br><strong>EduPulse Support Team</strong></p>
-        <p style="margin-top: 8px; font-size: 12px;">This is an automated email — please do not reply.</p>
+        <p>EduPulse Team 🚀</p>
+        <p>This is an automated email. Do not reply.</p>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+}
+
+// ========================================
+// 🔁 PASSWORD RESET EMAIL
+// ========================================
+export function generatePasswordResetEmailTemplate({ resetUrl, email, ip }) {
+  return `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f0f9ff;
+        font-family: 'Segoe UI', sans-serif;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 16px;
+        border: 1px solid #bae6fd;
+      }
+      h1 {
+        text-align: center;
+        color: #0369a1;
+      }
+      p {
+        color: #083344;
+        font-size: 15px;
+      }
+      .btn {
+        display: block;
+        text-align: center;
+        margin: 25px auto;
+        padding: 14px;
+        background: #0ea5e9;
+        color: white;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: bold;
+      }
+      .link {
+        font-size: 12px;
+        word-break: break-word;
+        color: #0369a1;
+      }
+      .footer {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 13px;
+        color: #0c4a6e;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0c4a6e; }
+        .container { background: #083344; color: #bae6fd; }
+        p, h1 { color: #bae6fd; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>🔁 Reset Your Password</h1>
+
+      <p>Hello,</p>
+      <p>You requested a password reset for your EduPulse account.</p>
+
+      <a href="${resetUrl}" class="btn">Reset Password</a>
+
+      <p>If the button doesn't work:</p>
+      <p class="link">${resetUrl}</p>
+
+      <p>This link expires in <strong>5 minutes</strong>.</p>
+
+      <div class="footer">
+        <p><strong>Account:</strong> ${email}</p>
+        <p><strong>IP:</strong> ${ip || "Unknown"}</p>
+        <p>If you didn’t request this, ignore this email.</p>
       </div>
     </div>
   </body>

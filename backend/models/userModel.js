@@ -52,27 +52,11 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: {}
   },
-  verificationCode: Number,
-  verificationCodeExpire: Date,
   resetPasswordToken: String,
   resetPasswordTokenExpire: Date,
 }, { timestamps: true });
 
-// Generate verification code method
-userSchema.methods.generateVerificationCode = function () {
-  function generateRandomFiveDigitNumber() {
-    const firstDigit = Math.floor(Math.random() * 9) + 1;
-    const remainingDigits = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0");
-    return parseInt(firstDigit + remainingDigits);
-  }
 
-  const verificationCode = generateRandomFiveDigitNumber();
-  this.verificationCode = verificationCode;
-  this.verificationCodeExpire = Date.now() + 5 * 60 * 1000;
-  return verificationCode;
-};
 
 // Generate JWT token method
 userSchema.methods.generateToken = function () {
@@ -87,6 +71,8 @@ userSchema.methods.generateRefreshToken = function () {
     expiresIn: process.env.REFRESH_TOKEN_EXPIRE,
   });
 };
+
+import { invalidateUserCache } from "../middleware/cacheMiddleware.js";
 
 // Generate reset password token method
 userSchema.methods.getResetPasswordToken = function () {
@@ -103,6 +89,27 @@ userSchema.methods.getResetPasswordToken = function () {
     throw new Error("Failed to generate reset password token");
   }
 };
+
+// Automated Cache Invalidation Hooks
+userSchema.post('save', async function(doc) {
+  if (doc) {
+    try {
+      await invalidateUserCache(doc._id);
+    } catch(err) {
+       console.error("Redis Cache Invalidation Failed on save:", err);
+    }
+  }
+});
+
+userSchema.post('findOneAndUpdate', async function(doc) {
+  if (doc) {
+    try {
+      await invalidateUserCache(doc._id);
+    } catch(err) {
+       console.error("Redis Cache Invalidation Failed on update:", err);
+    }
+  }
+});
 
 const User = mongoose.model("User", userSchema);
 export default User;

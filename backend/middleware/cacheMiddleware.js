@@ -16,33 +16,18 @@
 
 import NodeCache from "node-cache";
 import dotenv from "dotenv";
+import redisClient from "../config/redis.js";
+
 dotenv.config();
 
-let redisClient = null;
 let useRedis = false;
 
 // ==========================================================
-// 🔴 Attempt Redis Connection (auto-fallback to memory)
+// 🔴 Redis Verification
 // ==========================================================
 if (process.env.REDIS_URL) {
-    try {
-        const { createClient } = await import("redis");
-        redisClient = createClient({ url: process.env.REDIS_URL });
-
-        redisClient.on("error", (err) =>
-            console.warn("⚠️ Redis Cache Error:", err.message)
-        );
-
-        redisClient.on("connect", () =>
-            console.log("✅ Redis connected successfully for caching.")
-        );
-
-        await redisClient.connect();
-        useRedis = true;
-    } catch (err) {
-        console.warn("⚠️ Redis unavailable. Using in-memory cache instead.");
-        useRedis = false;
-    }
+    useRedis = true;
+    console.log("✅ CacheMiddleware maps to central ioredis.");
 } else {
     console.log("ℹ️ No REDIS_URL provided — using local NodeCache.");
 }
@@ -75,13 +60,27 @@ const getCache = async (key) => {
 const setCache = async (key, value, ttl) => {
     try {
         if (useRedis && redisClient) {
-            await redisClient.setEx(key, ttl, JSON.stringify(value));
+            await redisClient.set(key, JSON.stringify(value), "EX", ttl);
         } else {
             localCache.set(key, value, ttl);
         }
     } catch (err) {
         console.warn("⚠️ Cache SET error:", err.message);
     }
+};
+
+export const cacheUser = async (user) => {
+  if (useRedis) await redisClient.set(`user:${user._id}`, JSON.stringify(user), "EX", 3600);
+};
+
+export const getCachedUser = async (id) => {
+  if (!useRedis) return null;
+  const data = await redisClient.get(`user:${id}`);
+  return data ? JSON.parse(data) : null;
+};
+
+export const invalidateUserCache = async (id) => {
+  if (useRedis) await redisClient.del(`user:${id}`);
 };
 
 export const clearCacheKey = async (key) => {

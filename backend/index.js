@@ -1,13 +1,7 @@
 /**
  * ========================================
- * 🌐 EduPulse Backend – Main Server File
+ * 🚀 EduPulse Backend – Optimized Server
  * ========================================
- * Includes:
- * - Secure middleware setup (Helmet, mongoSanitize, RateLimit)
- * - Global error handling
- * - Cloudinary + Multer ready
- * - Routes for Auth, Users, Courses, Sections, Lectures
- * - Health checks & graceful startup
  */
 
 import express from "express";
@@ -28,18 +22,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // ===========================
-// ⚙️ Environment Setup
+// ⚙️ ENV CONFIG
 // ===========================
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 // ===========================
-// 🧠 Imports (Database & Routes)
+// 🧠 IMPORTS
 // ===========================
 import connectDB from "./config/connectDB.js";
-import { removeUnverifiedAccounts } from "./services/removeUnverifiedAccounts.js";
 import { errorMiddleware } from "./middleware/errorMiddlewares.js";
+import { removeUnverifiedAccounts } from "./services/removeUnverifiedAccounts.js";
 
-// Routers
+// Routes
 import authRouter from "./routes/authRouter.js";
 import userRouter from "./routes/userRoutes.js";
 import courseRouter from "./routes/courseRouter.js";
@@ -59,192 +53,92 @@ import progressRouter from "./routes/progressRouter.js";
 import paymentRouter from "./routes/paymentRouter.js";
 
 // ===========================
-// 🚀 App Initialization
+// 🚀 APP INIT
 // ===========================
 const app = express();
-const port = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8080;
 
 // ===========================
-// 🔐 Security Middleware
+// 🔐 SECURITY MIDDLEWARE
 // ===========================
-app.set("trust proxy", 1); // Trust proxy headers (for Render.com, Heroku, etc.)
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(mongoSanitize());
-app.disable("x-powered-by"); // Hide Express info for security
+app.disable("x-powered-by");
 
 // ===========================
-// 🌍 CORS Configuration
+// 🌍 CORS (ULTRA FIXED)
 // ===========================
-const allowedOrigins = [
-  "https://edupulse-theta.vercel.app",
-  "https://edupulse-theta.vercel.app/",
-  "https://edupulse-ko2w.onrender.com",
-  ...(process.env.FRONTEND_URL?.split(",").map(url => url.trim().replace(/\/$/, "")) || []),
-].filter(Boolean);
+const allowedOrigins = process.env.FRONTEND_URL.split(",");
 
-// Pre-flight OPTIONS handler
-app.options('*', cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
-      return;
-    }
-
-    // Normalize origin by removing trailing slash
-    const normalizedOrigin = origin.replace(/\/$/, "");
-
-    // Check if origin is allowed
-    const isAllowed = allowedOrigins.some(
-      (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
-    ) || (process.env.NODE_ENV !== "production" && normalizedOrigin.startsWith("http://localhost:"));
-
-    if (isAllowed) {
-      // Return the EXACT origin that was sent (not a different one)
-      callback(null, origin);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
-      // For production, reject the request
-      callback(new Error(`CORS not allowed for origin: ${origin}`), false);
+      callback(new Error("CORS not allowed: " + origin));
     }
   },
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Request-ID",
-    "Cache-Control",
-    "X-Requested-With",
-    "Accept",
-    "Origin",
-    "X-HTTP-Method-Override"
-  ],
-  exposedHeaders: [
-    "Content-Length",
-    "X-JSON-Response-Size",
-    "Cache-Control",
-    "ETag"
-  ],
+  credentials: true
 }));
 
+// ===========================
+// 🚦 RATE LIMIT
+// ===========================
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
+  "/api",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+  })
+);
 
-      // Normalize origin by removing trailing slash
-      const normalizedOrigin = origin.replace(/\/$/, "");
-
-      // Check if origin is allowed
-      const isAllowed = allowedOrigins.some(
-        (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
-      ) || (process.env.NODE_ENV !== "production" && normalizedOrigin.startsWith("http://localhost:"));
-
-      if (isAllowed) {
-        // Return the EXACT origin that was sent (not a different one)
-        callback(null, origin);
-      } else {
-        console.warn(`CORS blocked origin: ${origin}`);
-        // For production, reject the request
-        callback(new Error(`CORS not allowed for origin: ${origin}`), false);
-      }
-    },
-    credentials: true,
-    optionsSuccessStatus: 200,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Request-ID",
-      "Cache-Control",
-      "X-Requested-With",
-      "Accept",
-      "Origin",
-      "X-HTTP-Method-Override"
-    ],
-    exposedHeaders: [
-      "Content-Length",
-      "X-JSON-Response-Size",
-      "Cache-Control",
-      "ETag"
-    ],
+app.use(
+  "/api/auth",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1500,
   })
 );
 
 // ===========================
-// 🚦 Rate Limiting (Tiered)
-// ===========================
-const defaultRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1000,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "⏳ Too many requests, please try again later.",
-  },
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1500,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "⚠️ Too many authentication attempts, please wait a bit.",
-  },
-});
-
-app.use("/api/", defaultRateLimit);
-app.use("/api/auth", authLimiter);
-
-// ===========================
-// 🧩 Middleware Configuration
+// 🧩 MIDDLEWARE
 // ===========================
 app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // ===========================
-// 📂 Static & Upload Handling
+// 📂 STATIC FILES
 // ===========================
-const uploadsDir = path.join(__dirname, "public/uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log("📁 Created uploads directory:", uploadsDir);
+const uploadPath = path.join(__dirname, "public/uploads");
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath, { recursive: true });
 }
-app.use("/uploads", express.static(uploadsDir));
+app.use("/uploads", express.static(uploadPath));
 
 // ===========================
-// 🧱 Database Connection
+// 🧱 DATABASE
 // ===========================
 connectDB()
-  .then(() => console.log("✅ MongoDB Connected Successfully!"))
-  .catch((err) => {
-    console.error("❌ Database connection failed:", err.message);
-    console.warn("⚠️ Continuing without DB (for dev mode)");
-  });
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error("❌ DB Error:", err.message));
 
 // ===========================
-// 🧹 Background Services
+// 🧹 BACKGROUND JOBS
 // ===========================
 removeUnverifiedAccounts();
 
-// Add request logging middleware
+// ===========================
+// 📡 REQUEST LOGGER
+// ===========================
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} from ${req.ip}`);
+  console.log(`${req.method} ${req.url} - ${req.ip}`);
   next();
 });
 
 // ===========================
-// 🧩 API Routes
+// 🔗 ROUTES
 // ===========================
 app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
@@ -265,114 +159,52 @@ app.use("/api/progress", progressRouter);
 app.use("/api/payments", paymentRouter);
 
 // ===========================
-// 🧪 Health & Test Routes
+// 🧪 HEALTH CHECK
 // ===========================
 app.get("/api/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "✅ EduPulse Backend Running Smoothly!",
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development",
-    features: {
-      security: "Active",
-      cors: "Configured",
-      database: "Connected",
-      fileUploads: "Enabled",
-      analytics: "Enabled",
-    },
-  });
-});
-
-app.get("/api/test", (req, res) => {
   res.json({
     success: true,
-    message: "🚀 Backend Test Route Working!",
-    timestamp: new Date().toISOString(),
+    message: "✅ EduPulse Backend Running",
+    environment: process.env.NODE_ENV,
   });
 });
 
 // ===========================
-// 🌟 Root Endpoint
+// ❌ 404 HANDLER
 // ===========================
-app.get("/", (req, res) =>
-  res.send(
-    `<h1>Welcome to EduPulse Backend 🎓</h1><p>Visit <a href="/api/health">/api/health</a> for system status.</p>`
-  )
-);
-
-// ===========================
-// 🧾 Error Handling
-// ===========================
-
-// Handle large file upload errors
-app.use((error, req, res, next) => {
-  if (error.code === "LIMIT_FILE_SIZE") {
-    return res.status(413).json({
-      success: false,
-      message:
-        "📦 File too large. Max allowed: 100MB for regular files, 5GB for videos.",
-      code: "FILE_TOO_LARGE",
-    });
-  }
-
-  if (error.code === "LIMIT_FILE_COUNT") {
-    return res.status(400).json({
-      success: false,
-      message: "🚫 Too many files uploaded.",
-      code: "TOO_MANY_FILES",
-    });
-  }
-
-  next(error);
-});
-
-// Catch-all 404
 app.use("*", (req, res) => {
-  // Log 404 errors for debugging
-  console.log(`404 Not Found: ${req.method} ${req.originalUrl} from ${req.ip}`);
-
   res.status(404).json({
     success: false,
-    message: `❌ Route not found: ${req.originalUrl}`,
-    method: req.method,
-    ip: req.ip,
-    userAgent: req.get('User-Agent')
+    message: `Route not found: ${req.originalUrl}`,
   });
 });
 
-// Global error handler
+// ===========================
+// 💥 ERROR HANDLER
+// ===========================
 app.use(errorMiddleware);
 
 // ===========================
-// 🖥️ Server Startup
+// 🖥️ SERVER START
 // ===========================
-const server = app.listen(port, () => {
-  console.log("==============================================");
-  console.log("🚀 EduPulse Backend Server Started Successfully");
-  console.log(`🌐 Running on: http://localhost:${port}`);
-  console.log("🔗 API Base: http://localhost:" + port + "/api");
-  console.log("🏥 Health: http://localhost:" + port + "/api/health");
-  console.log("🌍 Frontend URL: " + (process.env.FRONTEND_URL));
-  console.log("==============================================");
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 
 // ===========================
-// 🧯 Graceful Shutdown Handling
+// 🧯 SHUTDOWN HANDLING
 // ===========================
 process.on("SIGINT", () => {
-  console.log("🛑 Gracefully shutting down server...");
-  server.close(() => {
-    console.log("✅ Server closed successfully.");
-    process.exit(0);
-  });
+  console.log("Shutting down...");
+  server.close(() => process.exit(0));
 });
 
-process.on("unhandledRejection", (err) => {
-  console.error("❌ Unhandled Promise Rejection:", err);
+process.on("unhandledRejection", err => {
+  console.error("Unhandled Rejection:", err);
   server.close(() => process.exit(1));
 });
 
-process.on("uncaughtException", (err) => {
-  console.error("💥 Uncaught Exception:", err);
+process.on("uncaughtException", err => {
+  console.error("Uncaught Exception:", err);
   process.exit(1);
 });

@@ -33,7 +33,7 @@ export const getAllUsers = catchAsyncErrors(async (req, res, next) => {
     
     // Fetch users with pagination
     const users = await User.find(query)
-        .select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire')
+        .select('-password -resetPasswordToken -resetPasswordTokenExpire')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit));
@@ -57,7 +57,7 @@ export const getAllUsers = catchAsyncErrors(async (req, res, next) => {
 // Get user profile
 export const getUserProfile = catchAsyncErrors(async (req, res, next) => {
     const user = await User.findById(req.user.id)
-        .select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+        .select('-password -resetPasswordToken -resetPasswordTokenExpire');
     
     if (!user) {
         return next(new ErrorHandler("User not found", 404));
@@ -72,7 +72,7 @@ export const getUserProfile = catchAsyncErrors(async (req, res, next) => {
 // Get complete user profile with role-specific information
 export const getUserProfileComplete = catchAsyncErrors(async (req, res, next) => {
   const user = await User.findById(req.user.id)
-    .select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire')
+    .select('-password -resetPasswordToken -resetPasswordTokenExpire')
     .populate({
       path: 'enrolledCourses',
       select: 'title description category level price thumbnail totalEnrolled averageRating totalDurationMinutes enrollmentStatus createdAt updatedAt slug'
@@ -255,7 +255,7 @@ export const updateUserProfile = catchAsyncErrors(async (req, res, next) => {
         userId,
         updateData,
         { new: true, runValidators: true }
-    ).select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+    ).select('-password -resetPasswordToken -resetPasswordTokenExpire');
 
     res.status(200).json({
         success: true,
@@ -323,7 +323,7 @@ export const updateUserDescription = catchAsyncErrors(async (req, res, next) => 
         userId,
         { description },
         { new: true, runValidators: true }
-    ).select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+    ).select('-password -resetPasswordToken -resetPasswordTokenExpire');
 
     res.status(200).json({
         success: true,
@@ -370,7 +370,7 @@ export const updateUserPhotoUrl = catchAsyncErrors(async (req, res, next) => {
         userId,
         { photoUrl },
         { new: true, runValidators: true }
-    ).select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+    ).select('-password -resetPasswordToken -resetPasswordTokenExpire');
 
     res.status(200).json({
         success: true,
@@ -443,7 +443,7 @@ export const updateUserAvatar = catchAsyncErrors(async (req, res, next) => {
                 }
             },
             { new: true, runValidators: true }
-        ).select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+        ).select('-password -resetPasswordToken -resetPasswordTokenExpire');
 
         // Validate that the update was successful
         if (!updatedUser) {
@@ -504,7 +504,7 @@ export const removeUserAvatar = catchAsyncErrors(async (req, res, next) => {
                 $unset: { avatar: 1 }
             },
             { new: true, runValidators: true }
-        ).select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+        ).select('-password -resetPasswordToken -resetPasswordTokenExpire');
 
         // Validate that the update was successful
         if (!updatedUser) {
@@ -816,7 +816,7 @@ export const getUserById = catchAsyncErrors(async (req, res, next) => {
     const { userId } = req.params;
     
     const user = await User.findById(userId)
-        .select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+        .select('-password -resetPasswordToken -resetPasswordTokenExpire');
     
     if (!user) {
         return next(new ErrorHandler("User not found", 404));
@@ -854,7 +854,7 @@ export const updateUserRole = catchAsyncErrors(async (req, res, next) => {
         userId,
         { role },
         { new: true, runValidators: true }
-    ).select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+    ).select('-password -resetPasswordToken -resetPasswordTokenExpire');
     
     res.status(200).json({
         success: true,
@@ -878,7 +878,7 @@ export const verifyUserAccount = catchAsyncErrors(async (req, res, next) => {
         userId,
         { accountVerified: true },
         { new: true, runValidators: true }
-    ).select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+    ).select('-password -resetPasswordToken -resetPasswordTokenExpire');
     
     res.status(200).json({
         success: true,
@@ -985,7 +985,7 @@ export const updateUserSettings = catchAsyncErrors(async (req, res, next) => {
 // Export user data
 export const exportUserData = catchAsyncErrors(async (req, res, next) => {
     const user = await User.findById(req.user.id)
-        .select('-password -verificationCode -verificationCodeExpire -resetPasswordToken -resetPasswordTokenExpire');
+        .select('-password -resetPasswordToken -resetPasswordTokenExpire');
     
     if (!user) {
         return next(new ErrorHandler("User not found", 404));

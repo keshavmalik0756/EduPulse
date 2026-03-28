@@ -1,63 +1,123 @@
 import nodemailer from "nodemailer";
 
 /**
- * Send email using Nodemailer with Gmail/SMTP
- * Fixed callback handling for better compatibility
+ * ========================================
+ * 🚀 EduPulse Advanced Email Service
+ * ========================================
  */
-const sendEmail = async (options) => {
+
+// Create transporter ONCE (pooling enabled)
+const createTransporter = () => {
+  const port = parseInt(process.env.SMTP_PORT, 10);
+
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port,
+    secure: port === 465, // true for 465, false for 587
+    auth: {
+      user: process.env.SMTP_MAIL,
+      pass: process.env.SMTP_PASSWORD,
+    },
+
+    // 🔥 PERFORMANCE BOOST
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+
+    // 🔐 SECURITY
+    tls: {
+      rejectUnauthorized: true,
+    },
+
+    // ⏱️ TIMEOUTS
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+  });
+};
+
+// Singleton transporter
+const transporter = createTransporter();
+
+/**
+ * Retry Wrapper
+ */
+const sendWithRetry = async (mailOptions, retries = 3) => {
   try {
-    // Check if env variables are present
-    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_MAIL || !process.env.SMTP_PASSWORD) {
-      throw new Error("Missing SMTP environment variables");
+    return await transporter.sendMail(mailOptions);
+  } catch (error) {
+    if (retries > 0) {
+      console.warn(`⚠️ Email failed, retrying... (${retries})`);
+      return sendWithRetry(mailOptions, retries - 1);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Main Email Function
+ */
+const sendEmail = async ({
+  email,
+  subject,
+  html,
+  text,
+  attachments = [],
+  cc,
+  bcc,
+}) => {
+  try {
+    // ===========================
+    // 🔍 ENV VALIDATION
+    // ===========================
+    const requiredEnv = [
+      "SMTP_HOST",
+      "SMTP_PORT",
+      "SMTP_MAIL",
+      "SMTP_PASSWORD",
+    ];
+
+    for (const key of requiredEnv) {
+      if (!process.env[key]) {
+        throw new Error(`Missing ENV: ${key}`);
+      }
     }
 
-    const port = parseInt(process.env.SMTP_PORT, 10);
-    const isSecure = port === 465;
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      service: process.env.SMTP_SERVICE,
-      port,
-      secure: isSecure,
-      auth: {
-        user: process.env.SMTP_MAIL,
-        pass: process.env.SMTP_PASSWORD,
-      },
-      tls: {
-        rejectUnauthorized: false
-      },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,   // 10 seconds
-      socketTimeout: 10000,     // 10 seconds
-    });
-
+    // ===========================
+    // 📧 MAIL OPTIONS
+    // ===========================
     const mailOptions = {
       from: `EduPulse <${process.env.SMTP_MAIL}>`,
-      to: options.email,
-      subject: options.subject,
-      html: options.message,
+      to: email,
+      subject,
+      html,
+      text: text || "EduPulse Notification",
+      attachments,
+      cc,
+      bcc,
     };
 
-    // Send email with Promise wrapper
-    const info = await new Promise((resolve, reject) => {
-      transporter.sendMail(mailOptions, (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result || { messageId: "sent", success: true });
-        }
-      });
+    console.log("📤 Sending email to:", email);
+
+    const info = await sendWithRetry(mailOptions);
+
+    console.log("✅ Email sent:", {
+      messageId: info.messageId,
+      response: info.response,
     });
 
     return info;
-  } catch (error) {
-    console.error("❌ Email sending failed!");
-    console.error("🔍 Error Name:", error.name);
-    console.error("🔍 Error Message:", error.message);
-    if (error.code) console.error("🔍 Error Code:", error.code);
-    if (error.command) console.error("🔍 SMTP Command:", error.command);
 
-    throw new Error(`Email could not be sent: ${error.message}${error.code ? ` (Code: ${error.code})` : ""}`);
+  } catch (error) {
+    console.error("❌ EMAIL SERVICE ERROR");
+    console.error({
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      command: error.command,
+    });
+
+    throw new Error(`Email failed: ${error.message}`);
   }
 };
 

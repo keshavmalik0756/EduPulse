@@ -1,27 +1,64 @@
-export const sendToken = (user, statusCode, res) => {
+/**
+ * ========================================
+ * 🔐 EduPulse Advanced Token Handler
+ * ========================================
+ */
+import redis from "../config/redis.js";
+
+export const sendToken = async (user, statusCode, res, req = null) => {
   try {
-    const token = user.generateToken();
+    // ===========================
+    // 🔑 GENERATE TOKENS
+    // ===========================
+    const accessToken = user.generateToken();
     const refreshToken = user.generateRefreshToken();
 
-    // Validate that tokens were generated
-    if (!token || !refreshToken) {
-      throw new Error("Failed to generate authentication tokens");
+    if (!accessToken || !refreshToken) {
+      throw new Error("Token generation failed");
     }
 
-    const cookieOptions = {
-      expires: new Date(
-        Date.now() + process.env.COOKIE_EXPIRE * 24 * 60 * 60 * 1000
-      ),
+    // ===========================
+    // 🌍 ENV BASED COOKIE CONFIG
+    // ===========================
+    const isProduction = process.env.NODE_ENV === "production";
+
+    const accessTokenOptions = {
+      expires: new Date(Date.now() + 15 * 60 * 1000), // 15 min
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Secure in production
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
     };
+
+    const refreshTokenOptions = {
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+    };
+
+    // ===========================
+    // 📊 OPTIONAL LOGGING
+    // ===========================
+    console.log("🔐 Auth Success:", {
+      userId: user._id,
+      email: user.email,
+      ip: req?.ip,
+      device: req?.headers["user-agent"],
+    });
+
+    // ===========================
+    // 🍪 SET COOKIES & REDIS SESSION
+    // ===========================
+    await redis.set(`session:${user._id}`, refreshToken, "EX", 7 * 24 * 60 * 60);
 
     res
       .status(statusCode)
-      .cookie("token", token, cookieOptions)
+      .cookie("accessToken", accessToken, accessTokenOptions)
+      .cookie("refreshToken", refreshToken, refreshTokenOptions)
       .json({
         success: true,
+
+        // 🔥 MINIMAL SAFE USER DATA
         user: {
           _id: user._id,
           name: user.name,
@@ -29,14 +66,24 @@ export const sendToken = (user, statusCode, res) => {
           role: user.role,
           avatar: user.avatar,
         },
-        token,
+
+        // ⚡ OPTIONAL (for frontend usage)
+        accessToken,
         refreshToken,
       });
+
   } catch (error) {
-    console.error("💥 Token generation error:", error);
-    // Send a generic success response without tokens if there's an error
-    res.status(statusCode).json({
-      success: true,
+    console.error("💥 TOKEN ERROR:", {
+      message: error.message,
+      stack: error.stack,
+    });
+
+    // ===========================
+    // 🔁 FALLBACK RESPONSE
+    // ===========================
+    return res.status(statusCode).json({
+      success: false,
+      message: "Authentication successful but token setup failed",
       user: {
         _id: user._id,
         name: user.name,
@@ -44,7 +91,6 @@ export const sendToken = (user, statusCode, res) => {
         role: user.role,
         avatar: user.avatar,
       },
-      message: "Login successful. Please refresh the page to continue.",
     });
   }
 };

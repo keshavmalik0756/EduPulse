@@ -6,6 +6,7 @@ import Note from "../models/noteModel.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../services/cloudinary.js";
 // Removed logActivity import
 import mongoose from "mongoose";
+import redis from "../config/redis.js";
 
 // ========== Helper Function: Safely parse JSON strings from FormData ==========
 const parseJSON = (value) => {
@@ -256,57 +257,66 @@ export const createCourse = async (req, res) => {
 // ====================== GET ALL PUBLISHED COURSES ======================
 export const getPublishedCourses = async (req, res) => {
   try {
-    // Show all published courses regardless of enrollment status
-    // Students can view all published courses, but can only enroll in "open" ones
-    const courseDocs = await Course.find({ isPublished: true })
-      .populate("creator", "name email avatar")
-      .populate({
-        path: "sections",
-        populate: {
-          path: "lessons"
-        }
-      })
-      .sort({ createdAt: -1 });
+    let coursesWithVirtuals = [];
+    const cachedCourses = await redis.get("courses:all:published");
 
-    if (!courseDocs?.length) {
-      return res.status(404).json({
-        success: false,
-        message: "No published courses found.",
-      });
+    if (cachedCourses) {
+      coursesWithVirtuals = JSON.parse(cachedCourses);
+    } else {
+      const courseDocs = await Course.find({ isPublished: true })
+        .populate("creator", "name email avatar")
+        .populate({
+          path: "sections",
+          populate: {
+            path: "lessons"
+          }
+        })
+        .sort({ createdAt: -1 });
+
+      if (!courseDocs?.length) {
+        return res.status(404).json({
+          success: false,
+          message: "No published courses found.",
+        });
+      }
+
+      const courses = courseDocs.map(doc => doc.toObject({ virtuals: true }));
+      coursesWithVirtuals = courses.map(course => ({
+        ...course,
+        totalSections: course.sections?.length || 0,
+        durationFormatted: course.durationFormatted || `${Math.floor((course.totalDurationMinutes || 0) / 60)}h ${Math.floor((course.totalDurationMinutes || 0) % 60)}m` || "0m",
+        durationWithUnit: course.durationWithUnit || (course.totalDurationMinutes ? 
+          (() => {
+            const totalMinutes = course.totalDurationMinutes || 0;
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            
+            if (hours > 0 && minutes > 0) {
+              return `${hours} hours ${minutes} minutes`;
+            } else if (hours > 0) {
+              return `${hours} hours`;
+            } else {
+              return `${minutes} minutes`;
+            }
+          })() : "0 minutes"),
+        ...calculatePricing(course),
+      }));
+
+      // Set baseline cache without user-specific isEnrolled flags
+      await redis.set("courses:all:published", JSON.stringify(coursesWithVirtuals), "EX", 600);
     }
 
-    // Convert to objects with virtuals
-    const courses = courseDocs.map(doc => doc.toObject({ virtuals: true }));
-
-    // Add virtual properties to each course
-    const coursesWithVirtuals = courses.map(course => ({
+    // 🔥 Dynamically inject active user's `isEnrolled` property onto cached payloads instantly
+    const finalCourses = coursesWithVirtuals.map(course => ({
       ...course,
-      totalSections: course.sections?.length || 0,
-      durationFormatted: course.durationFormatted || `${Math.floor((course.totalDurationMinutes || 0) / 60)}h ${Math.floor((course.totalDurationMinutes || 0) % 60)}m` || "0m",
-      durationWithUnit: course.durationWithUnit || (course.totalDurationMinutes ? 
-        (() => {
-          const totalMinutes = course.totalDurationMinutes || 0;
-          const hours = Math.floor(totalMinutes / 60);
-          const minutes = totalMinutes % 60;
-          
-          if (hours > 0 && minutes > 0) {
-            return `${hours} hours ${minutes} minutes`;
-          } else if (hours > 0) {
-            return `${hours} hours`;
-          } else {
-            return `${minutes} minutes`;
-          }
-        })() : "0 minutes"),
-      ...calculatePricing(course),
-      // Add isEnrolled property if user is authenticated
       isEnrolled: req.user ? (course.enrolledStudents && course.enrolledStudents.some(studentId => 
         studentId.toString() === req.user._id.toString())) : false,
     }));
 
     res.status(200).json({
       success: true,
-      count: coursesWithVirtuals.length,
-      courses: coursesWithVirtuals,
+      count: finalCourses.length,
+      courses: finalCourses,
     });
   } catch (error) {
     console.error("Error fetching published courses:", error);

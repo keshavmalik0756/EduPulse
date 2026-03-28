@@ -8,6 +8,9 @@ import { sendToken } from "../utils/sendToken.js";
 import { sendVerificationCode } from "../utils/sendVerificationCode.js";
 import sendEmail from "../utils/sendEmail.js";
 import { generatePasswordResetEmailTemplate } from "../utils/emailTemplates.js";
+import { storeOTP, verifyOTP as checkRedisOTP } from "../utils/otpService.js";
+import { checkOtpLimit } from "../middleware/rateLimiter.js";
+import { getCachedUser, cacheUser } from "../middleware/cacheMiddleware.js";
 
 /* ========================================================
    REGISTER
@@ -22,7 +25,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
-    
+
     if (existingUser && existingUser.accountVerified) {
       return next(new ErrorHandler("User already registered with this email.", 400));
     }
@@ -34,7 +37,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
         email: email.toLowerCase(),
         accountVerified: false,
       });
-      
+
       if (unverifiedAttempts >= 5) {
         return next(
           new ErrorHandler(
@@ -46,22 +49,22 @@ export const register = catchAsyncErrors(async (req, res, next) => {
 
       // Update existing unverified user with new data
       const hashedPassword = await bcrypt.hash(password, 10);
-      
+
       // Validate role - only allow student or educator
       const validRoles = ["student", "educator"];
       const userRole = validRoles.includes(role) ? role : "student";
-      
+
       existingUser.name = name;
       existingUser.password = hashedPassword;
       existingUser.role = userRole;
-      
-      // Generate new verification code
-      const verificationCode = await existingUser.generateVerificationCode();
       await existingUser.save();
-      
-      // Send verification code via email
+
+      await checkOtpLimit(existingUser.email);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await storeOTP(existingUser.email, otp);
+
       try {
-        await sendVerificationCode(verificationCode, existingUser.email);
+        await sendVerificationCode({ otp, email: existingUser.email, req });
         return res.status(200).json({
           success: true,
           message: "Registration updated successfully. Please check your email for verification code.",
@@ -70,7 +73,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
         return res.status(200).json({
           success: true,
           message: "Registration updated successfully. Please contact support for verification.",
-          verificationCode: process.env.NODE_ENV === "development" ? verificationCode : undefined
+          verificationCode: process.env.NODE_ENV === "development" ? otp : undefined
         });
       }
     }
@@ -102,13 +105,12 @@ export const register = catchAsyncErrors(async (req, res, next) => {
       role: userRole,
     });
 
-    // Generate verification code
-    const verificationCode = await user.generateVerificationCode();
-    await user.save();
+    await checkOtpLimit(user.email);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await storeOTP(user.email, otp);
 
-    // Send verification code via email
     try {
-      await sendVerificationCode(verificationCode, user.email);
+      await sendVerificationCode({ otp, email: user.email, req });
       res.status(200).json({
         success: true,
         message: "User registered successfully. Please check your email for verification code.",
@@ -118,7 +120,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
       res.status(200).json({
         success: true,
         message: "User registered successfully. Please contact support for verification.",
-        verificationCode: process.env.NODE_ENV === "development" ? verificationCode : undefined
+        verificationCode: process.env.NODE_ENV === "development" ? otp : undefined
       });
     }
   } catch (error) {
@@ -127,13 +129,13 @@ export const register = catchAsyncErrors(async (req, res, next) => {
       const duplicateKey = Object.keys(error.keyValue)[0];
       return next(new ErrorHandler(`A user with this ${duplicateKey} already exists.`, 400));
     }
-    
+
     // Handle MongoDB validation errors
     if (error.name === 'ValidationError') {
       const message = Object.values(error.errors).map(val => val.message).join(', ');
       return next(new ErrorHandler(message, 400));
     }
-    
+
     next(error);
   }
 });
@@ -152,66 +154,37 @@ export const verifyOTP = catchAsyncErrors(async (req, res, next) => {
   try {
     // First check if user exists at all
     const existingUser = await User.findOne({ email: email.toLowerCase() });
-    
+
     if (!existingUser) {
       return next(
         new ErrorHandler("User not found. Please register first.", 404)
       );
     }
-    
+
     if (existingUser.accountVerified) {
       return next(
         new ErrorHandler("Account already verified. Please login directly.", 400)
       );
     }
 
-    const userAllentries = await User.find({
+    try {
+      await checkRedisOTP(email.toLowerCase(), otp.toString());
+    } catch (err) {
+      return next(new ErrorHandler(err.message || "Invalid or expired OTP", 400));
+    }
+
+    // Clean up if there are duplicate unverified entries (from previous flawed schema logic)
+    await User.deleteMany({
+      _id: { $ne: existingUser._id },
       email: email.toLowerCase(),
       accountVerified: false,
-    }).sort({ createdAt: -1 });
+    });
 
-    if (!userAllentries.length) {
-      return next(
-        new ErrorHandler("No pending verification found. Please register again.", 404)
-      );
-    }
-
-    let user;
-    if (userAllentries.length > 1) {
-      user = userAllentries[0];
-      await User.deleteMany({
-        _id: { $ne: user._id },
-        email,
-        accountVerified: false,
-      });
-    } else {
-      user = userAllentries[0];
-    }
-
-    // Convert OTP to number for comparison (handle both string and number inputs)
-    const otpNumber = parseInt(otp, 10);
-    if (isNaN(otpNumber) || user.verificationCode !== otpNumber) {
-      return next(
-        new ErrorHandler(
-          "Invalid OTP. Please check your email and try again.",
-          400
-        )
-      );
-    }
-
-    if (Date.now() > user.verificationCodeExpire.getTime()) {
-      return next(
-        new ErrorHandler("OTP expired. Please request a new verification code.", 400)
-      );
-    }
-
-    user.accountVerified = true;
-    user.verificationCode = null;
-    user.verificationCodeExpire = null;
-    await user.save({ validateModifiedOnly: true });
+    existingUser.accountVerified = true;
+    await existingUser.save({ validateModifiedOnly: true });
 
     // Use sendToken utility to generate token and send response
-    sendToken(user, 200, res);
+    await sendToken(existingUser, 200, res, req);
   } catch (error) {
     return next(
       new ErrorHandler("Internal server error. Please try again.", 500)
@@ -250,7 +223,7 @@ export const login = catchAsyncErrors(async (req, res, next) => {
     }
 
     // Send token and user data
-    sendToken(user, 200, res);
+    await sendToken(user, 200, res);
   } catch (error) {
     return next(new ErrorHandler("Login failed. Please try again.", 500));
   }
@@ -265,8 +238,8 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
     .cookie("token", "", {
       expires: new Date(Date.now()),
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      secure: true,          // REQUIRED for production
+      sameSite: "None",      // REQUIRED for Vercel ↔ Render
     })
     .json({
       success: true,
@@ -284,10 +257,21 @@ export const getUser = catchAsyncErrors(async (req, res, next) => {
       message: "User not authenticated"
     });
   }
-  
+
+  const cachedUser = await getCachedUser(req.user._id);
+  if (cachedUser) {
+    return res.status(200).json({
+      success: true,
+      user: cachedUser,
+    });
+  }
+
+  const user = await User.findById(req.user._id);
+  if (user) await cacheUser(user);
+
   res.status(200).json({
     success: true,
-    user: req.user,
+    user: user || req.user,
   });
 });
 
@@ -338,8 +322,8 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
       return next(
         new ErrorHandler(
-          process.env.NODE_ENV === "development" 
-            ? `Failed to send email: ${error.message}` 
+          process.env.NODE_ENV === "development"
+            ? `Failed to send email: ${error.message}`
             : "Failed to send password reset email. Please try again later.",
           500
         )
@@ -398,7 +382,7 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
   await user.save();
 
   // Use sendToken utility to generate token and send response
-  sendToken(user, 200, res);
+  await sendToken(user, 200, res);
 });
 
 /* ========================================================
@@ -448,16 +432,16 @@ export const updatePassword = catchAsyncErrors(async (req, res, next) => {
 ======================================================== */
 export const resendOTP = catchAsyncErrors(async (req, res, next) => {
   const { email } = req.body;
-  
+
   if (!email) {
     return next(new ErrorHandler("Email is required.", 400));
   }
 
   try {
     // Find the most recent unverified user with this email
-    const user = await User.findOne({ 
-      email: email.toLowerCase(), 
-      accountVerified: false 
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      accountVerified: false
     }).sort({ createdAt: -1 });
 
     if (!user) {
@@ -470,13 +454,12 @@ export const resendOTP = catchAsyncErrors(async (req, res, next) => {
       return next(new ErrorHandler("Account already verified. Please login directly.", 400));
     }
 
-    // Generate new verification code
-    const verificationCode = await user.generateVerificationCode();
-    await user.save();
+    await checkOtpLimit(user.email);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await storeOTP(user.email, otp);
 
-    // Send verification code via email
     try {
-      await sendVerificationCode(verificationCode, user.email);
+      await sendVerificationCode({ otp, email: user.email, req });
       res.status(200).json({
         success: true,
         message: "Verification code resent successfully. Please check your email.",
@@ -485,7 +468,7 @@ export const resendOTP = catchAsyncErrors(async (req, res, next) => {
       res.status(200).json({
         success: true,
         message: "Verification code generated. Please contact support if you don't receive the email.",
-        verificationCode: process.env.NODE_ENV === "development" ? verificationCode : undefined
+        verificationCode: process.env.NODE_ENV === "development" ? otp : undefined
       });
     }
   } catch (error) {
@@ -499,7 +482,7 @@ export const resendOTP = catchAsyncErrors(async (req, res, next) => {
 ======================================================== */
 export const refreshToken = catchAsyncErrors(async (req, res, next) => {
   const { token } = req.body;
-  
+
   if (!token) {
     return next(new ErrorHandler("Refresh token is required", 400));
   }
@@ -507,17 +490,17 @@ export const refreshToken = catchAsyncErrors(async (req, res, next) => {
   try {
     // Verify refresh token
     const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
-    
+
     // Find user
     const user = await User.findById(decoded.id);
-    
+
     if (!user) {
       return next(new ErrorHandler("User not found", 404));
     }
-    
+
     // Generate new access token
     const accessToken = user.generateToken();
-    
+
     res.status(200).json({
       success: true,
       token: accessToken,
