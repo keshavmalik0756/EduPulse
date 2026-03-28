@@ -6,11 +6,16 @@ import nodemailer from "nodemailer";
  * ========================================
  */
 
-// Create transporter ONCE (pooling enabled)
-const createTransporter = () => {
+// Singleton transporter
+let transporter = null;
+
+// Lazy initialize transporter to ensure process.env is 100% loaded
+const initTransporter = () => {
+  if (transporter) return transporter;
+
   const port = parseInt(process.env.SMTP_PORT, 10);
 
-  return nodemailer.createTransport({
+  transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port,
     secure: port === 465, // true for 465, false for 587
@@ -18,36 +23,43 @@ const createTransporter = () => {
       user: process.env.SMTP_MAIL,
       pass: process.env.SMTP_PASSWORD,
     },
+    
+    // 🔥 ENFORCE IPv4 (Fixes ENETUNREACH IPv6 errors in Node.js 18+)
+    host: process.env.SMTP_HOST, // Ensure this is overridden if needed
+    // The "family: 4" tells underlying net.Socket to resolve DNS to IPv4 only.
+    ...({ family: 4 }), // Ensure family is merged directly to options
 
-    // 🔥 PERFORMANCE BOOST
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
+    // 🔥 DISABLE POOLING FOR PAAS (Render/Heroku/Vercel)
+    // Cloud providers silently drop idle TCP sockets after ~60s.
+    // By disabling pool, we ensure a fresh, guaranteed connection every time.
+    pool: false,
 
     // 🔐 SECURITY
     tls: {
-      rejectUnauthorized: false, // Bypasses Render/Gmail SNI certificate handshake mismatches
+      rejectUnauthorized: false,
     },
 
-    // ⏱️ TIMEOUTS
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
+    // ⏱️ EXTENDED TIMEOUTS (combat slow initial handshakes)
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
   });
-};
 
-// Singleton transporter
-const transporter = createTransporter();
+  return transporter;
+};
 
 /**
  * Retry Wrapper
  */
 const sendWithRetry = async (mailOptions, retries = 3) => {
   try {
-    return await transporter.sendMail(mailOptions);
+    const tp = initTransporter();
+    return await tp.sendMail(mailOptions);
   } catch (error) {
     if (retries > 0) {
       console.warn(`⚠️ Email failed, retrying... (${retries})`);
+      // Wait a bit before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000));
       return sendWithRetry(mailOptions, retries - 1);
     }
     throw error;
