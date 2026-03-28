@@ -158,9 +158,25 @@ app.use("/api/quality", lectureQualityRouter);
 app.use("/api/progress", progressRouter);
 app.use("/api/payments", paymentRouter);
 
+import sendEmail from "./utils/sendEmail.js";
+
 // ===========================
-// 🧪 HEALTH CHECK
+// 🧪 HEALTH CHECK & TESTING
 // ===========================
+app.get("/test-email", async (req, res) => {
+  try {
+    await sendEmail({
+      email: "keshavmalik0756@gmail.com",
+      subject: "EduPulse SMTP Test",
+      html: "<h1>SMTP Configuration is successful!</h1>",
+    });
+    res.send("✅ Email sent successfully without 500 crashes.");
+  } catch (error) {
+    console.error("💥 TEST EMAIL ERROR:", error);
+    res.status(500).send(`❌ SMTP Failed: ${error.message}`);
+  }
+});
+
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,

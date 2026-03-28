@@ -26,7 +26,7 @@ const createTransporter = () => {
 
     // 🔐 SECURITY
     tls: {
-      rejectUnauthorized: true,
+      rejectUnauthorized: false, // Bypasses Render/Gmail SNI certificate handshake mismatches
     },
 
     // ⏱️ TIMEOUTS

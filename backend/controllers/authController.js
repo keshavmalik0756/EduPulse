@@ -302,12 +302,16 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
     // Send email with reset password link
     try {
-      const message = generatePasswordResetEmailTemplate(resetPasswordUrl);
+      const message = generatePasswordResetEmailTemplate({
+        resetUrl: resetPasswordUrl,
+        email: user.email,
+        ip: req.ip || req.connection?.remoteAddress
+      });
 
       await sendEmail({
         email: user.email,
         subject: "EduPulse Password Recovery",
-        message,
+        html: message,
       });
 
       res.status(200).json({
@@ -315,19 +319,12 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
         message: "Password reset link sent to your email.",
       });
     } catch (error) {
-      console.error("❌ Failed to send password reset email:", error);
+      console.error("💥 SMTP ERROR FULL:", error);
       user.resetPasswordToken = undefined;
       user.resetPasswordTokenExpire = undefined;
       await user.save({ validateBeforeSave: false });
 
-      return next(
-        new ErrorHandler(
-          process.env.NODE_ENV === "development"
-            ? `Failed to send email: ${error.message}`
-            : "Failed to send password reset email. Please try again later.",
-          500
-        )
-      );
+      return next(new ErrorHandler(error.message, 500));
     }
   } catch (error) {
     console.error("❌ Forgot Password Error:", error);
