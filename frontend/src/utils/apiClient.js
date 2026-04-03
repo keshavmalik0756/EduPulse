@@ -68,7 +68,6 @@ apiClient.interceptors.request.use(
     }
 
     // 🧩 Remove Cache-Control header that's causing CORS issues
-    // The backend will handle caching appropriately
     delete config.headers["Cache-Control"];
 
     return config;
@@ -108,11 +107,9 @@ apiClient.interceptors.response.use(
     // 🔄 Handle Token Expiration (401)
     // --------------------------
     if (status === 401 && !originalRequest._retry) {
-      // If we're already redirecting/logging out, just reject
       if (isRedirecting) return Promise.reject(error);
 
       if (isRefreshing) {
-        // Queue requests while refreshing
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         })
@@ -127,7 +124,6 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Get refresh token from localStorage
         const refreshToken = getRefreshToken();
         if (refreshToken) {
           const refreshResponse = await axios.post(
@@ -137,19 +133,11 @@ apiClient.interceptors.response.use(
           );
 
           const newToken = refreshResponse?.data?.token;
-          const refreshedUser = refreshResponse?.data?.user;
-          
           if (newToken) {
             setToken(newToken);
             apiClient.defaults.headers.Authorization = `Bearer ${newToken}`;
             processQueue(null, newToken);
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            
-            if (refreshedUser) {
-              localStorage.setItem("user", JSON.stringify(refreshedUser));
-              if (onUserUpdate) onUserUpdate(refreshedUser);
-            }
-            
             return apiClient(originalRequest);
           } else {
             throw new Error("No refresh token returned.");
@@ -172,45 +160,17 @@ apiClient.interceptors.response.use(
     if (status === 403) {
       const currentPath = window.location.pathname;
       if (currentPath.startsWith('/educator') || currentPath.includes('educator')) {
-        toast.error(data?.message || "Access denied. You don't have permission to access this resource.");
+        toast.error(data?.message || "Access denied. Educator permission required.");
       } else {
         handleAuthFailure("Access denied. Please re-login.");
       }
-    }
-
-    // --------------------------
-    // ⚠️ Client Errors (400–499)
-    // --------------------------
-    if (status >= 400 && status < 500 && status !== 401) {
-      console.warn(`⚠️ Client Error ${status}:`, {
-        message: data?.message,
-        url: error.config?.url,
-        method: error.config?.method,
-        data: error.config?.data,
-        fullError: data
-      });
-      toast.error(data?.message || "Something went wrong.");
-    }
-
-    // --------------------------
-    // 💥 Server Errors (500+)
-    // --------------------------
-    if (status >= 500) {
-      console.error("💥 Server Error:", data?.message);
-      toast.error("Server error occurred. Please try again later.");
     }
 
     return Promise.reject(error);
   }
 );
 
-// ====================== TOKEN UTILITIES ======================
-let onUserUpdate = null;
-
-export const setOnUserUpdate = (callback) => {
-  onUserUpdate = callback;
-};
-
+// Token utilities
 export const authUtils = {
   getToken,
   setToken,
@@ -230,5 +190,4 @@ export const apiWrapper = async (promise, fallbackMessage = "Request failed") =>
   }
 };
 
-// ====================== EXPORT ======================
 export default apiClient;

@@ -183,7 +183,7 @@ const Auth = () => {
     try {
       const idToken = await userCredential.user.getIdToken();
       // Remove .unwrap() to prevent raw Redux errors from throwing 
-      const resultAction = await dispatch(syncUserWithBackend(idToken, "student"));
+      const resultAction = await dispatch(syncUserWithBackend({ idToken, role: "student" }));
       
       if (syncUserWithBackend.fulfilled.match(resultAction)) {
         setLoading(false);

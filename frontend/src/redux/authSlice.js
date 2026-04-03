@@ -1,14 +1,7 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../utils/apiClient";
 
-let apiClient = null;
-const getApiClient = async () => {
-  if (!apiClient) {
-    const module = await import("../utils/apiClient");
-    apiClient = module.default;
-  }
-  return apiClient;
-};
-
+// ====================== HELPERS ======================
 const handleApiError = (error) => {
   if (error.response?.status === 429) {
     return "Rate limit exceeded. Please wait a few moments.";
@@ -40,18 +33,85 @@ const getInitialAuthState = () => {
 
   return {
     user: parsedUser,
-    isLoading: token ? true : false,
+    isLoading: !!token,
     error: null,
     message: null,
-    isAuthenticated: token ? true : false,
+    isAuthenticated: !!token,
   };
 };
+
+// ====================== ASYNC THUNKS ======================
+
+// Sync Firebase Identity with Backend
+export const syncUserWithBackend = createAsyncThunk(
+  "auth/sync",
+  async ({ idToken, role }, { rejectWithValue }) => {
+    try {
+      const res = await apiClient.post("/auth/sync", { idToken, role }, {
+        headers: { "Content-Type": "application/json" },
+      });
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Logout User
+export const logout = createAsyncThunk(
+  "auth/logout",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await apiClient.get("/auth/logout");
+      return res.data.message;
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Get Authenticated User Profile
+export const getUser = createAsyncThunk(
+  "auth/getUser",
+  async (_, { rejectWithValue }) => {
+    const token = localStorage.getItem("token");
+    if (!token) return rejectWithValue("No token found");
+
+    try {
+      const res = await apiClient.get("/auth/me");
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Update User Profile Data
+export const updateUserProfileData = createAsyncThunk(
+  "auth/updateProfile",
+  async (profileData, { rejectWithValue }) => {
+    try {
+      const res = await apiClient.put("/users/profile", profileData, {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.data.success) {
+        return res.data.user;
+      } else {
+        return rejectWithValue(res.data.message || "Failed to update profile");
+      }
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// ====================== SLICE ======================
 
 const authSlice = createSlice({
   name: "auth",
   initialState: getInitialAuthState(),
   reducers: {
-    initializeAuth(state) {
+    initializeAuthAction(state) {
       const token = localStorage.getItem("token");
       const user = localStorage.getItem("user");
       if (token) {
@@ -71,67 +131,9 @@ const authSlice = createSlice({
         state.user = null;
       }
     },
-    syncRequest(state) {
-      state.isLoading = true;
+    resetAuthSliceAction(state) {
       state.error = null;
       state.message = null;
-    },
-    syncSuccess(state, action) {
-      state.isLoading = false;
-      state.message = action.payload.message;
-      state.isAuthenticated = true;
-      state.user = action.payload.user;
-      if (action.payload.token) {
-        localStorage.setItem("token", action.payload.token);
-      }
-      if (action.payload.user) {
-        localStorage.setItem("user", JSON.stringify(action.payload.user));
-        localStorage.setItem("userId", action.payload.user._id);
-      }
-    },
-    syncFailed(state, action) {
-      state.isLoading = false;
-      state.error = action.payload;
-      state.isAuthenticated = false;
-    },
-    logoutRequest(state) {
-      state.isLoading = true;
-    },
-    logoutSuccess(state, action) {
-      state.isLoading = false;
-      state.message = action.payload;
-      state.isAuthenticated = false;
-      state.user = null;
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      localStorage.removeItem("userId");
-    },
-    logoutFailed(state, action) {
-      state.isLoading = false;
-      state.error = action.payload;
-    },
-    getUserRequest(state) {
-      state.isLoading = true;
-      state.error = null;
-    },
-    getUserSuccess(state, action) {
-      state.isLoading = false;
-      state.user = action.payload.user;
-      state.isAuthenticated = true;
-      if (action.payload.user) {
-        localStorage.setItem("user", JSON.stringify(action.payload.user));
-        localStorage.setItem("userId", action.payload.user._id);
-      }
-    },
-    getUserFailed(state, action) {
-      state.isLoading = false;
-      if (action.payload?.includes("401") || action.payload?.includes("Session expired")) {
-        state.isAuthenticated = false;
-        state.user = null;
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        localStorage.removeItem("userId");
-      }
     },
     updateUserProfile(state, action) {
       if (state.user) {
@@ -139,122 +141,108 @@ const authSlice = createSlice({
         localStorage.setItem("user", JSON.stringify(state.user));
       }
     },
-    resetAuthSlice(state) {
-      state.error = null;
-      state.message = null;
-    },
+  },
+  extraReducers: (builder) => {
+    builder
+      // SYNC
+      .addCase(syncUserWithBackend.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+        state.message = null;
+      })
+      .addCase(syncUserWithBackend.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.message = action.payload.message;
+        if (action.payload.token) {
+          localStorage.setItem("token", action.payload.token);
+        }
+        if (action.payload.user) {
+          localStorage.setItem("user", JSON.stringify(action.payload.user));
+          localStorage.setItem("userId", action.payload.user._id);
+        }
+      })
+      .addCase(syncUserWithBackend.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+        state.isAuthenticated = false;
+      })
+      // LOGOUT
+      .addCase(logout.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(logout.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.message = action.payload;
+        state.isAuthenticated = false;
+        state.user = null;
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("userId");
+      })
+      .addCase(logout.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // GET USER
+      .addCase(getUser.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(getUser.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+        if (action.payload.user) {
+          localStorage.setItem("user", JSON.stringify(action.payload.user));
+          localStorage.setItem("userId", action.payload.user._id);
+        }
+      })
+      .addCase(getUser.rejected, (state, action) => {
+        state.isLoading = false;
+        if (action.payload?.includes("401") || action.payload?.includes("Session expired")) {
+          state.isAuthenticated = false;
+          state.user = null;
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          localStorage.removeItem("userId");
+        } else {
+          state.error = action.payload;
+        }
+      })
+      // UPDATE PROFILE
+      .addCase(updateUserProfileData.fulfilled, (state, action) => {
+        state.user = { ...state.user, ...action.payload };
+        localStorage.setItem("user", JSON.stringify(state.user));
+        if (action.payload && action.payload._id) {
+          localStorage.setItem("userId", action.payload._id);
+        }
+      });
   },
 });
 
 export const {
-  initializeAuth: initializeAuthAction,
-  syncRequest,
-  syncSuccess,
-  syncFailed,
-  logoutRequest,
-  logoutSuccess,
-  logoutFailed,
-  getUserRequest,
-  getUserSuccess,
-  getUserFailed,
-  updateUserProfile,
+  initializeAuthAction,
   resetAuthSliceAction,
+  updateUserProfile,
 } = authSlice.actions;
 
 export default authSlice.reducer;
 
-// Initialize authentication on app start
+// Initialize authentication on app start (manual thunk to orchestrate)
 export const initializeAuth = () => async (dispatch) => {
   const token = localStorage.getItem("token");
   if (token) {
-    dispatch(authSlice.actions.initializeAuth());
+    dispatch(initializeAuthAction());
     try {
-      await dispatch(getUser());
+      await dispatch(getUser()).unwrap();
     } catch (error) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      dispatch(authSlice.actions.logoutSuccess("Session expired"));
+      // Fallback is handled by getUser.rejected
     }
   } else {
-    dispatch(authSlice.actions.initializeAuth());
-  }
-};
-
-// Sync Firebase Identity with Backend
-export const syncUserWithBackend = (idToken, role) => async (dispatch) => {
-  const client = await getApiClient();
-  dispatch(syncRequest());
-
-  try {
-    const res = await client.post("/auth/sync", { idToken, role }, {
-      headers: { "Content-Type": "application/json" },
-    });
-    dispatch(syncSuccess(res.data));
-    return res.data;
-  } catch (error) {
-    const errorMessage = handleApiError(error);
-    dispatch(syncFailed(errorMessage));
-    throw new Error(errorMessage);
-  }
-};
-
-export const logout = () => async (dispatch) => {
-  const client = await getApiClient();
-  dispatch(logoutRequest());
-  try {
-    const res = await client.get("/auth/logout");
-    dispatch(logoutSuccess(res.data.message));
-    return res.data;
-  } catch (error) {
-    const errorMessage = handleApiError(error);
-    dispatch(logoutFailed(errorMessage));
-    throw new Error(errorMessage);
-  }
-};
-
-export const getUser = () => async (dispatch) => {
-  const client = await getApiClient();
-  const token = localStorage.getItem("token");
-  if (!token) {
-    dispatch(getUserFailed("No token found"));
-    return;
-  }
-
-  dispatch(getUserRequest());
-  try {
-    const res = await client.get("/auth/me");
-    dispatch(getUserSuccess(res.data));
-    return res.data;
-  } catch (error) {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      dispatch(logoutSuccess("Session expired"));
-      return;
-    }
-    const errorMessage = handleApiError(error);
-    dispatch(getUserFailed(errorMessage));
-    throw new Error(errorMessage);
-  }
-};
-
-export const updateUserProfileData = (profileData) => async (dispatch) => {
-  const client = await getApiClient();
-  try {
-    const res = await client.put("/users/profile", profileData, {
-      headers: { "Content-Type": "application/json" },
-    });
-    if (res.data.success) {
-      dispatch(updateUserProfile(res.data.user));
-      if (res.data.user && res.data.user._id) {
-        localStorage.setItem("userId", res.data.user._id);
-      }
-      return res.data;
-    } else {
-      throw new Error(res.data.message || "Failed to update profile");
-    }
-  } catch (error) {
-    const errorMessage = handleApiError(error);
-    throw new Error(errorMessage);
+    dispatch(initializeAuthAction());
   }
 };
