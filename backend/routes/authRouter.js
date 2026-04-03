@@ -1,16 +1,8 @@
-// routes/authRouter.js
 import express from "express";
 import {
-  register,
-  verifyOTP,
-  resendOTP,
-  login,
+  syncUser,
   logout,
   getUser,
-  forgotPassword,
-  resetPassword,
-  updatePassword,
-  refreshToken,
 } from "../controllers/authController.js";
 import { isAuthenticated } from "../middleware/authMiddleware.js";
 import rateLimiter from "../middleware/rateLimiter.js";
@@ -19,22 +11,20 @@ const router = express.Router();
 
 /**
  * ===================================
- * 🔐 AUTHENTICATION & USER SECURITY
+ * 🔐 FIREBASE AUTHENTICATION ROUTER
  * ===================================
  */
-router.post("/register", rateLimiter(10, 15 * 60 * 1000), register);
-router.post("/verify-otp", rateLimiter(30, 15 * 60 * 1000), verifyOTP);
-router.post("/resend-otp", rateLimiter(10, 15 * 60 * 1000), resendOTP);
-router.post("/login", rateLimiter(50, 15 * 60 * 1000), login);
+router.post("/sync", rateLimiter(50, 15 * 60 * 1000), syncUser);
+
 router.get("/logout", isAuthenticated, logout);
 router.get("/me", isAuthenticated, getUser);
 
-// Password Management
-router.post("/password/forgot", rateLimiter(10, 15 * 60 * 1000), forgotPassword);
-router.put("/password/reset/:token", resetPassword);
-router.put("/password/update", isAuthenticated, updatePassword);
+// Keep an empty refresh endpoint in case frontend still hits it during transition
+router.post("/refresh", (req, res) => res.json({ success: true, message: "Token refresh migrated to Firebase." }));
 
-// Refresh Access Token
-router.post("/refresh", refreshToken);
+// Dummy password routes to prevent frontend 404s before the frontend updates completely deploy
+router.post("/password/forgot", (req, res) => res.status(200).json({ success: true, message: "Please reset your password using the Firebase Auth UI."}));
+router.put("/password/reset/:token", (req, res) => res.status(200).json({ success: true, message: "Please use Firebase Auth to reset password."}));
+router.put("/password/update", isAuthenticated, (req, res) => res.status(200).json({ success: true, message: "Please use Firebase Auth to update password."}));
 
 export default router;

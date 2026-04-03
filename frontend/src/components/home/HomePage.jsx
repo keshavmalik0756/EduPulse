@@ -106,8 +106,8 @@ function HomePage() {
 
     return (
         <div className='w-full overflow-hidden bg-white'>
-            <div className='relative w-full min-h-screen flex flex-col items-center justify-center pt-20 pb-32 overflow-hidden border-b border-slate-100'>
-                <HomeNavbar />
+            <HomeNavbar />
+            <div className='relative w-full min-h-screen flex flex-col items-center justify-center pt-32 pb-32 overflow-hidden border-b border-slate-100'>
 
                 <div 
                     className="absolute inset-0 opacity-[0.03] mix-blend-multiply z-10 pointer-events-none"

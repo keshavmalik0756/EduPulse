@@ -5,10 +5,10 @@
 import apiClient, { apiWrapper } from "../utils/apiClient.js";
 import { toast } from "react-hot-toast";
 import { FrontendErrorHandler } from "../utils/errorHandler.js";
-import { 
-  setCache, 
-  getCache, 
-  invalidateCache, 
+import {
+  setCache,
+  getCache,
+  invalidateCache,
   CACHE_TTL,
   processApiResponse
 } from "../utils/cacheManager.js";
@@ -57,29 +57,35 @@ const CACHE_KEYS = {
 // ========================== Retry Wrapper (Transient Failures) ================
 const withRetry = async (fn, retries = 3, delay = 1000) => {
   let lastError;
-  
+
   for (let i = 0; i <= retries; i++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
-      
+
       // If it's a CORS error, don't retry as it won't help
       if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
         console.error('CORS error detected, not retrying:', error.message);
         throw error;
       }
-      
+
+      // 🚫 Don't retry on 4xx Client Errors (including 401, 403, 404)
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
+        console.warn(`Client error ${error.response.status}, skipping retry.`);
+        throw error;
+      }
+
       // If we've exhausted retries, throw the error
       if (i === retries) {
         throw error;
       }
-      
+
       console.warn(`🔄 Retrying request... (${retries - i} attempts left)`, error.message);
       await new Promise((res) => setTimeout(res, delay * Math.pow(1.5, i)));
     }
   }
-  
+
   throw lastError;
 };
 
@@ -92,50 +98,50 @@ const courseService = {
   // ==========================================================================
   async getCreatorCourses() {
     const cacheKey = CACHE_KEYS.creatorCourses;
-    
+
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
       console.log('Returning cached creator courses');
       return cached;
     }
-    
+
     try {
       const result = await withRetry(async () => {
         console.log('Fetching creator courses from API');
         const response = await apiClient.get("/courses/getcreatorcourses");
         const { data } = response;
-        
+
         // Validate response
         if (!data) {
           throw new Error('No data received from server');
         }
-        
+
         // Ensure we always return a consistent structure
         const courses = processApiResponse(data)?.courses || [];
         console.log(`Received ${courses.length} courses from API`);
-        
+
         return {
           success: data?.success ?? true,
           count: courses.length,
           courses,
         };
       });
-      
+
       // Cache the result with appropriate TTL (1 minute for creator courses)
       setCache(cacheKey, result, CACHE_TTL.SHORT);
       return result;
     } catch (error) {
       const errorInfo = FrontendErrorHandler.handleApiError(error);
       console.error("Error fetching creator courses:", error);
-      
+
       // If it's a CORS error, provide a more specific message
       if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
         toast.error('Network connectivity issue. Please check your internet connection and try again.');
       } else {
         toast.error(errorInfo.message);
       }
-      
+
       return {
         success: false,
         count: 0,
@@ -151,18 +157,18 @@ const courseService = {
   // ==========================================================================
   async getPublishedCourses() {
     const cacheKey = CACHE_KEYS.publishedCourses;
-    
+
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
       return cached;
     }
-    
+
     try {
       const result = await withRetry(async () => {
         const response = await apiClient.get("/courses/getpublished");
         const { data } = response;
-        
+
         // Ensure we always return a consistent structure
         const courses = processApiResponse(data)?.courses || processApiResponse(data) || [];
         return {
@@ -171,7 +177,7 @@ const courseService = {
           count: courses.length,
         };
       });
-      
+
       // Cache the result with appropriate TTL (5 minutes for published courses)
       setCache(cacheKey, result, CACHE_TTL.MEDIUM);
       return result;
@@ -194,53 +200,53 @@ const courseService = {
   // ==========================================================================
   async getCourseStatistics() {
     const cacheKey = CACHE_KEYS.stats;
-    
+
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
       console.log('Returning cached course statistics');
       return cached;
     }
-    
+
     try {
       const result = await withRetry(async () => {
         console.log('Fetching course statistics from API');
         const response = await apiClient.get("/courses/stats");
         const { data } = response;
-        
+
         // Validate response
         if (!data) {
           throw new Error('No data received from server');
         }
-        
+
         // Ensure we always return a consistent structure with defaults
         const stats = {
           ...defaultStats,
           ...(processApiResponse(data)?.stats || data?.stats || {})
         };
-        
-        return { 
-          success: true, 
-          stats 
+
+        return {
+          success: true,
+          stats
         };
       });
-      
+
       // Cache the result with appropriate TTL (10 minutes for course statistics)
       setCache(cacheKey, result, CACHE_TTL.MEDIUM_LONG);
       return result;
     } catch (error) {
       const errorInfo = FrontendErrorHandler.handleApiError(error);
       console.error("Error fetching course statistics:", error);
-      
+
       // If it's a CORS error, provide a more specific message
       if (error.message && (error.message.includes('CORS') || error.message.includes('blocked'))) {
         toast.error('Network connectivity issue. Please check your internet connection and try again.');
       } else {
         toast.error(errorInfo.message);
       }
-      
-      return { 
-        success: false, 
+
+      return {
+        success: false,
         stats: { ...defaultStats },
         message: errorInfo.message,
         code: errorInfo.code
@@ -260,17 +266,17 @@ const courseService = {
     ).then((response) => {
       const body = processApiResponse(response) || response;
       toast.success("🎉 Course created successfully!");
-      
+
       // if backend returns { success:true, course: {...} }
       const course = body?.course ?? body?.data?.course ?? body;
-      
+
       // Invalidate related cache entries
       invalidateCache(CACHE_KEYS.creatorCourses);
       invalidateCache(CACHE_KEYS.publishedCourses);
       invalidateCache(CACHE_KEYS.stats);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         course,
         message: body?.message || "Course created successfully!"
       };
@@ -294,18 +300,18 @@ const courseService = {
     ).then((response) => {
       const body = processApiResponse(response) || response;
       toast.success("✅ Course updated successfully!");
-      
+
       // if backend returns { success:true, course: {...} }
       const course = body?.course ?? body?.data?.course ?? body;
-      
+
       // Invalidate related cache entries
       invalidateCache(CACHE_KEYS.creatorCourses);
       invalidateCache(CACHE_KEYS.publishedCourses);
       invalidateCache(CACHE_KEYS.course(courseId));
       invalidateCache(CACHE_KEYS.stats);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         course,
         message: body?.message || "Course updated successfully!"
       };
@@ -327,15 +333,15 @@ const courseService = {
     ).then((response) => {
       const data = processApiResponse(response) || response;
       toast.success("🗑️ Course deleted successfully!");
-      
+
       // Invalidate related cache entries
       invalidateCache(CACHE_KEYS.creatorCourses);
       invalidateCache(CACHE_KEYS.publishedCourses);
       invalidateCache(CACHE_KEYS.course(courseId));
       invalidateCache(CACHE_KEYS.stats);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: data?.message || "Course deleted successfully!"
       };
     }).catch(error => {
@@ -356,15 +362,15 @@ const courseService = {
     ).then((response) => {
       const data = processApiResponse(response) || response;
       toast.success("📢 Course publish status updated!");
-      
+
       // Invalidate related cache entries
       invalidateCache(CACHE_KEYS.creatorCourses);
       invalidateCache(CACHE_KEYS.publishedCourses);
       invalidateCache(CACHE_KEYS.course(courseId));
       invalidateCache(CACHE_KEYS.stats); // Add this line to invalidate stats cache
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         course: data?.course || data?.data?.course || data,
         message: data?.message || "Course publish status updated!"
       };
@@ -384,13 +390,13 @@ const courseService = {
       .then((response) => {
         const body = processApiResponse(response) || response;
         toast.success("🎓 Successfully enrolled in course!");
-        
+
         // Invalidate related cache entries
         invalidateCache(CACHE_KEYS.enrollments);
         invalidateCache(CACHE_KEYS.course(courseId));
-        
-        return { 
-          success: true, 
+
+        return {
+          success: true,
           userId: body?.userId,
           enrollment: body,
           message: body?.message || "Successfully enrolled in course!"
@@ -411,13 +417,13 @@ const courseService = {
       .then((response) => {
         const body = processApiResponse(response) || response;
         toast.success("👋 Successfully unenrolled from course!");
-        
+
         // Invalidate related cache entries
         invalidateCache(CACHE_KEYS.enrollments);
         invalidateCache(CACHE_KEYS.course(courseId));
-        
-        return { 
-          success: true, 
+
+        return {
+          success: true,
           userId: body?.userId,
           unenrollment: body,
           message: body?.message || "Successfully unenrolled from course!"
@@ -435,7 +441,7 @@ const courseService = {
   // ==========================================================================
   async getCourseById(courseIdOrSlug, bypassCache = false) {
     const cacheKey = CACHE_KEYS.course(courseIdOrSlug);
-    
+
     // Check cache first (unless bypassed)
     if (!bypassCache) {
       const cached = getCache(cacheKey);
@@ -443,18 +449,18 @@ const courseService = {
         return cached;
       }
     }
-    
+
     try {
       const result = await withRetry(async () => {
         const response = await apiClient.get(`/courses/get/${courseIdOrSlug}`);
         const { data } = response;
-        
+
         return {
           success: true,
           course: processApiResponse(data)?.course,
         };
       });
-      
+
       // Cache the result with appropriate TTL (5 minutes for course data)
       setCache(cacheKey, result, CACHE_TTL.MEDIUM);
       return result;
@@ -476,24 +482,24 @@ const courseService = {
   // ==========================================================================
   async getCourseAnalytics(courseId) {
     const cacheKey = CACHE_KEYS.analytics(courseId);
-    
+
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
       return cached;
     }
-    
+
     try {
       const result = await withRetry(async () => {
         const response = await apiClient.get(`/courses/get/${courseId}/analytics`);
         const { data } = response;
-        
+
         return {
           success: true,
           data: processApiResponse(data)?.analytics,
         };
       });
-      
+
       // Cache the result with appropriate TTL (2 minutes for analytics data)
       setCache(cacheKey, result, CACHE_TTL.SHORT_MEDIUM);
       return result;
@@ -515,24 +521,24 @@ const courseService = {
   // ==========================================================================
   async getEnrolledStudents(courseId) {
     const cacheKey = CACHE_KEYS.students(courseId);
-    
+
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
       return cached;
     }
-    
+
     try {
       const result = await withRetry(async () => {
         const response = await apiClient.get(`/courses/get/${courseId}/students`);
         const { data } = response;
-        
+
         return {
           success: true,
           data: { students: processApiResponse(data)?.students },
         };
       });
-      
+
       // Cache the result with appropriate TTL (5 minutes for student data)
       setCache(cacheKey, result, CACHE_TTL.MEDIUM);
       return result;
@@ -554,13 +560,13 @@ const courseService = {
   // ==========================================================================
   async getCourseReviews(courseId) {
     const cacheKey = CACHE_KEYS.reviews(courseId);
-    
+
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
       return cached;
     }
-    
+
     try {
       const response = await apiClient.get(`/reviews/course/${courseId}`);
       const { data } = response;
@@ -568,7 +574,7 @@ const courseService = {
         success: true,
         data: { reviews: processApiResponse(data)?.reviews },
       };
-      
+
       // Cache the result with appropriate TTL (5 minutes for reviews)
       setCache(cacheKey, result, CACHE_TTL.MEDIUM);
       return result;
@@ -592,12 +598,12 @@ const courseService = {
     ).then((response) => {
       const data = processApiResponse(response) || response;
       toast.success("⭐ Review submitted successfully!");
-      
+
       // Invalidate related cache entries
       invalidateCache(CACHE_KEYS.reviews(courseId));
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         data: data?.data,
         message: data?.message || "Review submitted successfully!"
       };
@@ -616,12 +622,12 @@ const courseService = {
     ).then((response) => {
       const data = processApiResponse(response) || response;
       toast.success("✏️ Review updated!");
-      
+
       // Invalidate all reviews cache since we don't know which course this review belongs to
       invalidateCache('course_reviews_*');
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         data: data?.data,
         message: data?.message || "Review updated successfully!"
       };
@@ -640,10 +646,10 @@ const courseService = {
     ).then((response) => {
       const data = processApiResponse(response) || response;
       toast.success("🗑️ Review deleted successfully!");
-      
+
       // Invalidate all reviews cache since we don't know which course this review belongs to
       invalidateCache('course_reviews_*');
-      
+
       return {
         success: true,
         message: data?.message || "Review deleted successfully!"
@@ -661,21 +667,21 @@ const courseService = {
   // ==========================================================================
   async getCourseDiscussions(courseId) {
     const cacheKey = CACHE_KEYS.discussions(courseId);
-    
+
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
       return cached;
     }
-    
+
     try {
       const response = await apiClient.get(`/discussions/course/${courseId}`);
       const { data } = response;
-      const result = { 
-        success: true, 
-        data: processApiResponse(data)?.questions 
+      const result = {
+        success: true,
+        data: processApiResponse(data)?.questions
       };
-      
+
       // Cache the result with appropriate TTL (2 minutes for discussions)
       setCache(cacheKey, result, CACHE_TTL.SHORT_MEDIUM);
       return result;
@@ -699,12 +705,12 @@ const courseService = {
     ).then((response) => {
       const data = processApiResponse(response) || response;
       toast.success("💬 Question posted!");
-      
+
       // Invalidate related cache entries
       invalidateCache(CACHE_KEYS.discussions(courseId));
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         data: data?.data,
         message: data?.message || "Question posted successfully!"
       };
@@ -723,12 +729,12 @@ const courseService = {
     ).then((response) => {
       const data = processApiResponse(response) || response;
       toast.success("✅ Answer added successfully!");
-      
+
       // Invalidate all discussions cache since we don't know which course this question belongs to
       invalidateCache('course_discussions_*');
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         data: data?.data,
         message: data?.message || "Answer added successfully!"
       };
@@ -747,12 +753,12 @@ const courseService = {
     ).then((response) => {
       const data = processApiResponse(response) || response;
       toast.success("🔄 Question status updated!");
-      
+
       // Invalidate all discussions cache since we don't know which course this question belongs to
       invalidateCache('course_discussions_*');
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         data: data?.data,
         message: data?.message || "Question status updated!"
       };
@@ -770,8 +776,8 @@ const courseService = {
       "Failed to like answer"
     ).then((response) => {
       const data = processApiResponse(response) || response;
-      return { 
-        success: true, 
+      return {
+        success: true,
         data: data?.data,
         message: data?.message || "Answer liked successfully!"
       };
@@ -790,12 +796,12 @@ const courseService = {
     ).then((response) => {
       const data = processApiResponse(response) || response;
       toast.success("🏆 Marked as best answer!");
-      
+
       // Invalidate all discussions cache since we don't know which course this question belongs to
       invalidateCache('course_discussions_*');
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         data: data?.data,
         message: data?.message || "Marked as best answer!"
       };
@@ -812,25 +818,25 @@ const courseService = {
   // ==========================================================================
   async getUserEnrollments() {
     const cacheKey = CACHE_KEYS.enrollments;
-    
+
     // Check cache first
     const cached = getCache(cacheKey);
     if (cached) {
       return cached;
     }
-    
+
     try {
       const result = await withRetry(async () => {
         const response = await apiClient.get('/courses/enrollments/user');
         const { data } = response;
-        
+
         return {
           success: true,
           enrollments: processApiResponse(data)?.enrollments,
           count: data?.count || 0
         };
       });
-      
+
       // Cache the result with appropriate TTL (2 minutes for enrollments)
       setCache(cacheKey, result, CACHE_TTL.SHORT_MEDIUM);
       return result;

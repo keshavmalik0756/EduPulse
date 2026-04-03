@@ -4,11 +4,7 @@ import { useDispatch } from "react-redux";
 
 // ==================== PUBLIC PAGES ====================
 const LandingPage = lazy(() => import("./Layout/LandingPage"));
-const Signup = lazy(() => import("./pages/Signup"));
-const Login = lazy(() => import("./pages/Login"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const OTP = lazy(() => import("./pages/OTP"));
+const Auth = lazy(() => import("./pages/Auth/Auth"));
 const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 
 // ==================== SHARED COMPONENTS ====================
@@ -63,11 +59,9 @@ function App() {
           <Routes>
           {/* ==================== PUBLIC ROUTES ==================== */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route path="/verify-otp/:email" element={<OTP />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/login" element={<Navigate to="/auth" replace />} />
+          <Route path="/signup" element={<Navigate to="/auth" replace />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* ==================== GENERAL PROTECTED ROUTES ==================== */}

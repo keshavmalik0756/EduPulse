@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 // ====================== CONFIG ======================
 const BASE_URL = import.meta.env.VITE_API_URL || "https://edupulse-ko2w.onrender.com/api";
 let isRefreshing = false;
+let isRedirecting = false; // 🔒 Guard against multiple concurrent redirects
 let failedQueue = [];
 
 // ====================== AXIOS INSTANCE ======================
@@ -15,6 +16,25 @@ const apiClient = axios.create({
 });
 
 // ====================== UTIL HELPERS ======================
+const handleAuthFailure = (message = "Session expired. Please log in again.") => {
+  if (isRedirecting) return; // Already handling a redirect
+  isRedirecting = true;
+
+  // 1. Clear all auth state
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  localStorage.removeItem("userId");
+  localStorage.removeItem("refreshToken");
+
+  // 2. Notify user exactly once
+  toast.error(message);
+
+  // 3. Redirect to unified auth page
+  if (!window.location.pathname.startsWith("/auth")) {
+    window.location.href = "/auth";
+  }
+};
+
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
     if (error) prom.reject(error);
@@ -88,6 +108,9 @@ apiClient.interceptors.response.use(
     // 🔄 Handle Token Expiration (401)
     // --------------------------
     if (status === 401 && !originalRequest._retry) {
+      // If we're already redirecting/logging out, just reject
+      if (isRedirecting) return Promise.reject(error);
+
       if (isRefreshing) {
         // Queue requests while refreshing
         return new Promise(function (resolve, reject) {
@@ -105,11 +128,11 @@ apiClient.interceptors.response.use(
 
       try {
         // Get refresh token from localStorage
-        const refreshToken = getRefreshToken(); // This gets the refresh token from localStorage
+        const refreshToken = getRefreshToken();
         if (refreshToken) {
           const refreshResponse = await axios.post(
             `${BASE_URL}/auth/refresh`,
-            { token: refreshToken }, // Send refresh token in the body
+            { token: refreshToken },
             { withCredentials: true }
           );
 
@@ -122,13 +145,9 @@ apiClient.interceptors.response.use(
             processQueue(null, newToken);
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             
-            // Update user data in localStorage if provided
             if (refreshedUser) {
               localStorage.setItem("user", JSON.stringify(refreshedUser));
-              // Notify subscribers about user update
-              if (onUserUpdate) {
-                onUserUpdate(refreshedUser);
-              }
+              if (onUserUpdate) onUserUpdate(refreshedUser);
             }
             
             return apiClient(originalRequest);
@@ -140,9 +159,7 @@ apiClient.interceptors.response.use(
         }
       } catch (refreshError) {
         processQueue(refreshError, null);
-        setToken(null);
-        toast.error("Session expired. Please log in again.");
-        window.location.href = "/login";
+        handleAuthFailure("Session expired. Please log in again.");
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -153,19 +170,11 @@ apiClient.interceptors.response.use(
     // 🚫 Unauthorized or Forbidden (403)
     // --------------------------
     if (status === 403) {
-      // Check if user is trying to access a route they don't have permission for
       const currentPath = window.location.pathname;
-      
-      // If this is an educator trying to access educator routes, don't redirect to login
       if (currentPath.startsWith('/educator') || currentPath.includes('educator')) {
-        console.log('Educator access denied - staying on current page');
         toast.error(data?.message || "Access denied. You don't have permission to access this resource.");
       } else {
-        toast.error("Access denied. Please re-login.");
-        setToken(null);
-        if (!window.location.pathname.includes("/login")) {
-          window.location.href = "/login";
-        }
+        handleAuthFailure("Access denied. Please re-login.");
       }
     }
 

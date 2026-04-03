@@ -121,7 +121,7 @@ const extractPublicId = (urlOrId) => {
     try {
       const match = str.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z0-9]+)?$/i);
       if (match && match[1]) return match[1];
-    } catch {}
+    } catch { }
     return null;
   }
 };
@@ -210,7 +210,7 @@ export const uploadOnCloudinary = async (
     // if local path was provided, attempt safe unlink
     try {
       if (typeof localFileOrBuffer === "string") await safeUnlink(localFileOrBuffer);
-    } catch {}
+    } catch { }
     return { success: false, message: err?.message || String(err) };
   }
 };

@@ -15,8 +15,13 @@ import {
   BookOpen,
   LayoutDashboard,
   Crown,
-  GraduationCap
+  GraduationCap,
+  Settings,
+  CircleUser
 } from "lucide-react";
+
+import { logout } from "../../redux/authSlice";
+import { toast } from "react-hot-toast";
 
 function HomeNavbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -55,9 +60,16 @@ function HomeNavbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const handleLogout = () => {
-    dispatch({ type: "auth/logout" });
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await dispatch(logout());
+      setOpenProfile(false);
+      navigate("/auth");
+      toast.success("Logged out successfully");
+    } catch (err) {
+      toast.error("Logout failed. Please try again.");
+      console.error("Logout error:", err);
+    }
   };
 
   // 🧠 Intelligent Role-Based Configuration
@@ -193,35 +205,56 @@ function HomeNavbar() {
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     className="absolute right-0 mt-3 w-72 bg-white/95 backdrop-blur-xl rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-200/60 overflow-hidden z-[60] p-2"
                   >
-                    {/* Mini Profile Card */}
-                    <div className="p-4 bg-emerald-50/50 rounded-2xl mb-1.5 border border-emerald-100/50">
-                       <div className="flex items-center gap-3">
-                         <div className="w-11 h-11 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-md shadow-emerald-500/20">
+                    {/* Elite Header */}
+                    <div className="p-4 bg-gradient-to-br from-emerald-50/80 via-white to-sky-50/80 rounded-2xl mb-1.5 border border-emerald-100/40 relative overflow-hidden group/header">
+                       <div className="absolute top-0 right-0 p-2 opacity-50">
+                          <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white border border-slate-100 shadow-sm ${
+                            user?.role === 'admin' ? 'text-purple-600' : 
+                            user?.role === 'educator' ? 'text-blue-600' : 'text-emerald-600'
+                          }`}>
+                            {user?.role || 'User'}
+                          </div>
+                       </div>
+                       
+                       <div className="flex items-center gap-3 relative z-10">
+                         <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg ${
+                            user?.role === 'admin' ? 'bg-purple-500 shadow-purple-500/20' : 
+                            user?.role === 'educator' ? 'bg-blue-500 shadow-blue-500/20' : 'bg-emerald-500 shadow-emerald-500/20'
+                         }`}>
                             {user?.name?.charAt(0) || "U"}
                          </div>
                          <div className="flex flex-col min-w-0">
-                            <h4 className="font-bold text-slate-900 truncate tracking-tight">{user?.name || "Explorer"}</h4>
-                            <p className="text-xs text-slate-500 truncate font-medium">{user?.email}</p>
+                            <h4 className="font-bold text-slate-900 truncate tracking-tight text-sm">{user?.name || "Explorer"}</h4>
+                            <p className="text-[10px] text-slate-400 truncate font-bold uppercase tracking-tight">{user?.email}</p>
                          </div>
                        </div>
                     </div>
 
                     <div className="space-y-0.5">
-                      <button onClick={() => { navigate("/profile"); setOpenProfile(false); }} 
-                        className="w-full flex items-center gap-3 p-3 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all duration-300 font-bold text-sm group/item"
+                      <motion.button 
+                        whileHover={{ x: 4, backgroundColor: "rgba(16, 185, 129, 0.05)" }}
+                        onClick={() => { navigate("/profile"); setOpenProfile(false); }} 
+                        className="w-full flex items-center justify-between p-3 text-slate-600 hover:text-emerald-600 rounded-xl transition-all duration-300 font-bold text-sm group/item"
                       >
-                        <User className="w-4 h-4 group-hover/item:scale-110 transition-transform" />
-                        Profile
-                      </button>
+                        <div className="flex items-center gap-3">
+                          <CircleUser className="w-4 h-4 group-hover/item:scale-110 transition-transform" />
+                          <span>My Profile</span>
+                        </div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 opacity-0 group-hover/item:opacity-100 transition-opacity" />
+                      </motion.button>
                       
-                      <div className="h-px bg-slate-100 my-1 mx-2" />
+                      <div className="h-px bg-slate-100/60 my-1 mx-2" />
                       
-                      <button onClick={handleLogout}
-                        className="w-full flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 font-bold text-sm group/logout"
+                      <motion.button 
+                        whileHover={{ backgroundColor: "rgba(239, 68, 68, 0.05)" }}
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 p-3 text-red-500 rounded-xl transition-all duration-300 font-bold text-sm group/logout"
                       >
-                        <LogOut className="w-4 h-4 group-hover/logout:translate-x-1 transition-transform" />
-                        Logout
-                      </button>
+                        <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center group-hover/logout:bg-red-100 transition-colors">
+                          <LogOut className="w-4 h-4 group-hover/logout:translate-x-0.5 transition-transform" />
+                        </div>
+                        <span>Secure Logout</span>
+                      </motion.button>
                     </div>
                   </motion.div>
                 )}

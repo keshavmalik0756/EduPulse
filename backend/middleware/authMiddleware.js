@@ -6,11 +6,16 @@ import ErrorHandler from "../utils/errorHandler.js";
 
 // ✅ Middleware to check if user is authenticated
 export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
-  let token = req.cookies.token;
+  let token;
 
-  // Try Authorization header if no cookie token
-  if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+  // 1. Try Authorization header first (more modern/reliable for APIs)
+  if (req.headers.authorization?.startsWith("Bearer ")) {
     token = req.headers.authorization.split(" ")[1];
+  }
+  
+  // 2. Fallback to cookie if no header token
+  if (!token) {
+    token = req.cookies.token;
   }
 
   if (!token) {
@@ -27,7 +32,9 @@ export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
     req.user = await User.findById(decoded.id).select("_id name email role");
 
     if (!req.user) {
-      return next(new ErrorHandler("User not found with this token.", 404));
+      // Clear cookie if user not found to prevent stale session loops
+      res.cookie("token", "", { expires: new Date(0), httpOnly: true });
+      return next(new ErrorHandler("Session invalid or user no longer exists. Please log in again.", 401));
     }
 
     next();

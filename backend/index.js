@@ -31,7 +31,7 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 // ===========================
 import connectDB from "./config/connectDB.js";
 import { errorMiddleware } from "./middleware/errorMiddlewares.js";
-import { removeUnverifiedAccounts } from "./services/removeUnverifiedAccounts.js";
+// Unverified accounts logic removed for Firebase
 
 // Routes
 import authRouter from "./routes/authRouter.js";
@@ -62,7 +62,10 @@ const PORT = process.env.PORT || 8080;
 // 🔐 SECURITY MIDDLEWARE
 // ===========================
 app.set("trust proxy", 1);
-app.use(helmet());
+app.use(helmet({
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(mongoSanitize());
 app.disable("x-powered-by");
 
@@ -124,10 +127,7 @@ connectDB()
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.error("❌ DB Error:", err.message));
 
-// ===========================
-// 🧹 BACKGROUND JOBS
-// ===========================
-removeUnverifiedAccounts();
+// Firebase handles unverified accounts now
 
 // ===========================
 // 📡 REQUEST LOGGER
@@ -166,24 +166,12 @@ app.use("/api/quality", lectureQualityRouter);
 app.use("/api/progress", progressRouter);
 app.use("/api/payments", paymentRouter);
 
-import sendEmail from "./utils/sendEmail.js";
+// removed sendEmail
 
 // ===========================
 // 🧪 HEALTH CHECK & TESTING
 // ===========================
-app.get("/test-email", async (req, res) => {
-  try {
-    await sendEmail({
-      email: "keshavmalik0756@gmail.com",
-      subject: "EduPulse SMTP Test",
-      html: "<h1>SMTP Configuration is successful!</h1>",
-    });
-    res.send("✅ Email sent successfully without 500 crashes.");
-  } catch (error) {
-    console.error("💥 TEST EMAIL ERROR:", error);
-    res.status(500).send(`❌ SMTP Failed: ${error.message}`);
-  }
-});
+// SMTP Test removed
 
 app.get("/api/health", (req, res) => {
   res.json({

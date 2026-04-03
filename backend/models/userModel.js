@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -14,10 +13,11 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     unique: true,
   },
-  password: {
+  firebaseUid: {
     type: String,
     required: true,
-    select: false,
+    unique: true,
+    sparse: true,
   },
   role: {
     type: String,
@@ -52,8 +52,6 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: {}
   },
-  resetPasswordToken: String,
-  resetPasswordTokenExpire: Date,
 }, { timestamps: true });
 
 
@@ -74,21 +72,7 @@ userSchema.methods.generateRefreshToken = function () {
 
 import { invalidateUserCache } from "../middleware/cacheMiddleware.js";
 
-// Generate reset password token method
-userSchema.methods.getResetPasswordToken = function () {
-  try {
-    const resetToken = crypto.randomBytes(20).toString("hex");
-    this.resetPasswordToken = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
-    this.resetPasswordTokenExpire = Date.now() + 15 * 60 * 1000;
-    return resetToken;
-  } catch (error) {
-    console.error("Error generating reset password token:", error);
-    throw new Error("Failed to generate reset password token");
-  }
-};
+
 
 // Automated Cache Invalidation Hooks
 userSchema.post('save', async function(doc) {

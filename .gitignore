@@ -1,4 +1,19 @@
-# Logs
+# 🔐 Dependencies
+node_modules/
+**/node_modules/
+
+# 🏗️ Build Outputs
+dist/
+dist-ssr/
+build/
+
+# 🔐 Environment & Secrets
+.env
+.env.*
+!.env.example
+.antigravityignore
+
+# 📝 Logs
 logs
 *.log
 npm-debug.log*
@@ -7,32 +22,12 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# 🔐 Environment & Secrets
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-backend/.env
-frontend/.env
-.antigravityignore
-
-# Dependencies
-node_modules/
-**/node_modules/
-package-lock.json
-**/package-lock.json
-
-# Build
-dist/
-dist-ssr/
-*.local
-
-# Editor directories and files
+# 💻 Editor & OS Files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
